@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js" integrity="sha512-GZ1RIgZaSc8rnco/8CXfRdCpDxRCphenIiZ2ztLy3XQfCbQUSCuk8IudvNHxkRA3oUg6q0qejgN/qqyG1duv5Q==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xml-beautify@1.1.1/dist/XmlBeautify.js"></script>
+    <style>
+        body {
+            margin: 0;
+            background-color: #002240;
+            color: white;
+            font-size: 16px;
+        }
+
+        #leftTopContainer {
+            position: absolute;
+            top: 24px;
+            left: 0;
+            bottom: 50vh;
+            width: 50vw;
+
+            margin-bottom: .5px;
+            margin-top: 1px;
+            outline: 1px solid gray;
+        }
+
+        #leftBottomContainer {
+            position: absolute;
+            top: 50vh;
+            left: 0;
+            bottom: 24px;
+            width: 50vw;
+
+            margin-top: .5px;
+            margin-bottom: 1px;
+            outline: 1px solid gray;
+        }
+
+        #rightContainer {
+            position: absolute;
+            top: 24px;
+            left: 50vw;
+            bottom: 24px;
+            right: 0vw;
+
+            margin-left: .5px;
+            margin-bottom: 1px;
+            margin-top: 1px;
+            outline: 1px solid gray;
+        }
+
+        #topPanel {
+            position: absolute;
+            top: 0;
+            right: 0;
+            left: 0;
+            height: 24px;
+        }
+
+        #bottomPanel {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            left: 0;
+            height: 24px;
+        }
+
+        .ace_editor {
+            position: absolute;
+            top: 24px;
+            bottom: 0;
+            left: 0;
+            right: 0;
+        }
+
+        .ace_scrollbar-h::-webkit-scrollbar {
+            height: 1em;
+        }
+
+        .ace_scrollbar-v::-webkit-scrollbar {
+            width: 1em;
+        }
+
+        .ace_scrollbar::-webkit-scrollbar-track {
+            box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+        }
+
+        .ace_scrollbar::-webkit-scrollbar-thumb {
+            background-color: darkgrey;
+            outline: 1px solid slategrey;
+        }
+
+        button {
+            background: #011e3a;
+            color: white;
+            font-size: 16px;
+            padding: 0 10px;
+            margin: 2px;
+            border: 1px solid gray;
+        }
+
+        #auto+label+#autoWin,
+        #auto+label+#autoWin+label {
+            display: none;
+        }
+
+        #auto:checked+label+#autoWin,
+        #auto:checked+label+#autoWin+label {
+            display: inline-block;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="leftTopContainer">
+        <div id="editorXML"></div>
+        XML: <span class="status"></span>
+    </div>
+    <div id="leftBottomContainer">
+        <div id="editorXSL"></div>
+        XSL: <span class="status"></span>
+    </div>
+    <div id="rightContainer">
+        <button id="win">Window</button>
+        <div id="outputXML"></div>
+        Output: <span class="status"></span>
+    </div>
+    <div id="topPanel">
+        <button id="clearAll">Clear All</button>
+        <input type="checkbox" id="auto" checked><label for="auto">Auto</label>
+        <input type="checkbox" id="autoWin"><label for="autoWin">Auto Window</label>
+    </div>
+    <div id="bottomPanel"></div>
+    <script>
+        let prevDocString = '';
+
+        const ctrlSEvents = [];
+        let isCtrl = false;
+        document.addEventListener('keyup', function (e) {
+            if (e.keyCode == 17) isCtrl = false;
+        });
+
+        document.addEventListener('keydown', function (e) {
+            if (e.keyCode == 17) isCtrl = true;
+            if (e.keyCode == 83 && isCtrl == true) {
+                e.preventDefault();
+                for (const ctrlSEvent of ctrlSEvents) {
+                    ctrlSEvent.call();
+                }
+                return false;
+            }
+        });
+
+        function ctrlSAddEventListener(handler) {
+            ctrlSEvents.push(handler);
+        }
+
+        function prettifyXml(sourceXml) {
+            return new XmlBeautify().beautify(sourceXml, {useSelfClosingElement: true});
+        };
+
+        function initEditor(id) {
+            const editor = ace.edit(id);
+            editor.setTheme("ace/theme/cobalt");
+            editor.setShowPrintMargin(false);
+            editor.getSession().setMode("ace/mode/xml");
+            editor.setOptions({ fontSize: "16px" });
+            return editor;
+        }
+
+        const editorXMLStatus = document.querySelector("#editorXML + .status");
+        const editorXSLStatus = document.querySelector("#editorXSL + .status");
+        const outputXMLStatus = document.querySelector("#outputXML + .status");
+
+        let editorXMLStatusTimeout = null, editorXSLStatusTimeout = null, outputXMLStatusTimeout = null;
+
+        editorXMLStatus.style.background = 'rgba(0,255,0,0.5)';
+        editorXSLStatus.style.background = 'rgba(0,255,0,0.5)';
+
+        const editorXML = initEditor("editorXML");
+        const editorXSL = initEditor("editorXSL");
+        const outputXML = initEditor("outputXML");
+
+        outputXML.setReadOnly(true);
+
+        let stored;
+        try {
+            if ((stored = JSON.parse(localStorage['firlin123_xslTransform'])) != null) {
+                editorXSL.setValue(stored.xsl, -1);
+                editorXML.setValue(stored.xml, -1);
+                xslTransform();
+            }
+        } catch (e) { }
+
+        function saveAll() {
+            localStorage['firlin123_xslTransform'] = JSON.stringify({ xsl: editorXSL.getValue(), xml: editorXML.getValue() });
+
+            editorXMLStatus.innerText = editorXSLStatus.innerText = '(Saved)';
+            if (editorXMLStatusTimeout != null) {
+                clearTimeout(editorXMLStatusTimeout);
+            }
+            if (editorXSLStatusTimeout != null && editorXMLStatusTimeout != editorXSLStatusTimeout) {
+                clearTimeout(editorXSLStatusTimeout);
+            }
+            editorXSLStatusTimeout = editorXMLStatusTimeout = setTimeout(() => {
+                editorXMLStatus.innerText = editorXSLStatus.innerText = '';
+                editorXMLStatusTimeout = editorXSLStatusTimeout = null;
+            }, 3000);
+        }
+
+        function clearAll() {
+            localStorage['firlin123_xslTransform'] = null;
+            editorXSL.setValue('', -1);
+            editorXML.setValue('', -1);
+            outputXML.setValue('', -1);
+            saveAll();
+        }
+
+        document.querySelector("#clearAll").addEventListener('click', clearAll);
+
+        let kek = null;
+        function xslTransform() {
+            const xsltProcessor = new XSLTProcessor();
+            const domParser = new DOMParser();
+            const xmlSerializer = new XMLSerializer();
+
+            try {
+                const xslStylesheet = domParser.parseFromString(editorXSL.getValue(), "application/xml");
+                xsltProcessor.importStylesheet(xslStylesheet);
+                const xmlDoc = domParser.parseFromString(editorXML.getValue(), "application/xml");
+                //const fragment = xsltProcessor.transformToFragment(xmlDoc, document);
+                const doc = xsltProcessor.transformToDocument(xmlDoc);
+
+                if (doc != null) {
+                    const docString = xmlSerializer.serializeToString(doc);
+
+                    if (prevDocString != docString) {
+                        prevDocString = docString;
+                        outputXML.setValue(prettifyXml(docString), -1);
+
+                        outputXMLStatus.innerText = '(Succsess)';
+                        outputXMLStatus.style.background = 'rgba(0,255,0,0.5)';
+                        if (outputXMLStatusTimeout != null) {
+                            clearTimeout(outputXMLStatusTimeout);
+                        }
+                        outputXMLStatusTimeout = setTimeout(() => {
+                            outputXMLStatus.innerText = '';
+                            outputXMLStatusTimeout = null;
+                        }, 3000);
+                    }
+                }
+                else {
+                    throw "error";
+                }
+            }
+            catch (exc) {
+                console.log(exc);
+                kek = exc;
+                outputXMLStatus.innerText = '(Error)';
+                outputXMLStatus.style.background = 'rgba(255,0,0,0.5)';
+                if (outputXMLStatusTimeout != null) {
+                    clearTimeout(outputXMLStatusTimeout);
+                }
+                outputXMLStatusTimeout = setTimeout(() => {
+                    outputXMLStatus.innerText = '';
+                    outputXMLStatusTimeout = null;
+                }, 3000);
+            }
+        }
+
+        ctrlSAddEventListener(() => {
+            xslTransform();
+            saveAll();
+        });
+
+        function autoFunction() {
+            xslTransform();
+            if (autoWin.checked) updateWin();
+        }
+        let autoInterval = setInterval(autoFunction, 500);
+        const autoWin = document.querySelector("#autoWin");
+        document.querySelector("#auto").addEventListener('change', function (e) {
+            if (e.target.checked) {
+                if (autoInterval == null) autoInterval = setInterval(autoFunction, 500);
+            }
+            else {
+                if (autoInterval != null) { clearInterval(autoInterval); autoInterval = null; }
+            }
+        });
+
+        function createWin(title, body, script, left = 0, top = 0, width = 400, height = 350) {
+            const html = `<html lang="en"><head><title>${title}</title><head><body>${body}<${'script'}>${script}</${'script'}></body></html>`;
+            const win = window.open("about:blank", title, "width=" + width + ", height=" + width + ", top=" + top + ", left=" + left);
+            win.document.write(html);
+            return win;
+        }
+        function isOpen(win) {
+            return (win && !win?.closed) == true;
+        }
+
+        let prevWin = null;
+        let prevHtml = null;
+        function updateWin() {
+            if (isOpen(prevWin)) {
+                const html = outputXML.getValue();
+                if (prevHtml != html) {
+                    prevHtml = html;
+                    prevWin.clearAll();
+                    prevWin.document.write(html);
+                }
+            }
+        }
+        document.querySelector("#win").addEventListener('click', () => {
+            if (isOpen(prevWin)) {
+                updateWin();
+            }
+            else {
+                prevWin = createWin('Output', outputXML.getValue(), 'function clearAll(){ document.body.innerHTML=""; }');
+            }
+        });
+
+    </script>
+</body>
+
+</html>
