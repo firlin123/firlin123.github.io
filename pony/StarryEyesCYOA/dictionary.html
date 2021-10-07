@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <script>
+        let myDictionary = localStorage['myDictionary'] ? JSON.parse(localStorage['myDictionary']) : [
+            { "word": "heva", "translation": { "text": "you", "color": "#ffff00" } }
+        ]
+        window.addEventListener('message', receiveMessage);
+        window.addEventListener('storage', storage);
+        var origin = "";
+        function receiveMessage(event) {
+            if(origin === "") origin = event.origin;
+            if (event.data == null) event.source.postMessage(myDictionary, origin);
+            else myDictionary = event.data;
+            save();
+        }
+        function save() {
+            localStorage['myDictionary'] = JSON.stringify(myDictionary);
+        }
+        function storage() {
+            let myDictionary = localStorage['myDictionary'] ? JSON.parse(localStorage['myDictionary']) : [
+                { "word": "heva", "translation": { "text": "you", "color": "#ffff00" } }
+            ]
+            window.parent.postMessage(myDictionary, origin);
+        }
+    </script>
+</body>
+
+</html>

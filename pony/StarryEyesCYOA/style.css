@@ -1,0 +1,148 @@
+.hidden{
+	display: none!important;
+}
+
+#fw{
+	background: rgba(0,0,0,0);
+	overflow: hidden;
+}
+#fw:before{
+    content: " ";
+    right: 7px;
+    left: 7px;
+    top: 7px;
+    height: 20px;
+    position: absolute;
+    background: gray;
+    outline: 2px solid black;
+}
+
+#fwContent{
+    right: 7px;
+    left: 7px;
+    top: 27px;
+    bottom: 7px;
+    position: absolute;
+    background: white;
+    outline: 2px solid black;
+    overflow-y: scroll;
+}
+
+#fwHideBtn{
+	right: 9px;
+    top: 9px;
+    width: 14px;
+    height: 14px;
+    position: absolute;
+    background: red;
+    outline: 1px solid black;
+}
+
+.dictionaryEntry:nth-child(2n) {background: #EEE}
+
+.dictionaryEntry input{
+	width: 60px;
+	min-width: 0;
+    flex: 1 1 auto;
+    margin: 0 2px;
+    background: transparent;
+    border: 1px solid black;
+    height: 16px;
+}
+
+.dictionaryEntry button{
+	margin: 0 2px;
+	width: 25px;
+    height: 20px;
+    line-height: 15px;
+}
+
+.dictionaryEntry input[type="color"]{
+	height: 16px;
+    width: 16px;
+}
+
+.dictionaryEntry{
+	display: flex;
+    justify-content: stretch;
+    flex-wrap: wrap;
+    align-items: baseline;
+    
+    margin: 1px;
+}
+.dictionaryEntry>div{
+	display: flex;
+    align-items: center;
+}
+
+.dictDivP1{
+	flex: 1 1 auto;
+}
+.dictDivP2{
+	flex: 0 0 auto;
+}
+
+#dictContainer{
+	display: flex;
+    flex-direction: column;
+    
+    padding: 2px;
+    background: #00ff00;
+    flex: auto;
+}
+
+#dictContainer textarea{
+	resize: vertical;
+	height: 100px;
+	margin: 1px;
+    width: auto;
+}
+
+#dictionaryHeader {
+	position: sticky;
+    left: 0;
+    right: 0;
+    top: 0;
+}
+
+#dictionaryButtons{
+	display: flex;
+    justify-content: space-evenly;
+    flex-wrap: wrap;
+    
+    padding: 2px;
+    background: aquamarine;
+}
+
+#dictionaryHeader button{
+	flex-grow: 1;
+	margin: 0 1px;
+}
+
+#fwRestoreBtn {
+	right: 9px;
+    bottom: 9px;
+    width: 14px;
+    height: 14px;
+    position: fixed;
+    background: green;
+    outline: 1px solid black;
+}
+
+input[type="color"] {
+	-webkit-appearance: none;
+	border: 0;
+	padding: 0;
+}
+input[type="color"]::-webkit-color-swatch-wrapper {
+	padding: 0;
+	margin: 0;
+}
+input[type="color"]::-moz-color-swatch {
+	padding: 0;
+	margin: 0;
+}
+input[type="color"]::-webkit-color-swatch {
+	padding: 0;
+	margin: 0;
+}
