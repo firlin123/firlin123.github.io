@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" class="h-100">
+
+<head>
+    <link rel="icon" type="image/vnd.microsoft.icon" href="./favicon.ico">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="./npm/bootstrap_5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>CyTube Replay</title>
+    <style>
+        iframe {
+            flex: 1;
+        }
+
+        #navbarCollapse {
+            flex: 1;
+        }
+
+        .collapse-button {
+            display: inline-flex;
+            padding: 0.5rem;
+        }
+
+        .collapse-button:not(.collapsed)::before,
+        .collapse-button:not(.collapsed)::after {
+            transform: rotate(-180deg);
+        }
+
+        .collapse-button::before,
+        .collapse-button::after {
+            position: absolute;
+            flex-shrink: 0;
+            width: 1.4rem;
+            height: 1.4rem;
+            margin-left: auto;
+            content: "";
+            background-repeat: no-repeat;
+            background-size: 1.4rem;
+        }
+
+        .collapse-button::before {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23000'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+            transition: transform .2s ease-in-out;
+        }
+
+        .collapse-button::after {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23FFF'%3e%3cpath fill-rule='evenodd' d='M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z'/%3e%3c/svg%3e");
+            opacity: 1;
+            transform: transform .2s ease-in-out, opacity .15s ease-in-out;
+        }
+
+        .collapse-button:hover::after {
+            opacity: 0;
+        }
+
+        #navbarCollapse {
+            pointer-events: none;
+        }
+
+        #navbarCollapse div *:not(#navbarSupportedContent) {
+            pointer-events: all;
+        }
+
+        i.spinner-border {
+            margin-left: 0.5rem;
+            width: 1rem;
+            height: 1rem;
+        }
+    </style>
+</head>
+
+<body class="h-100 bg-secondary d-flex flex-column">
+    <div class="bg-dark px-3">
+        <div id="header" class="d-flex bg-dark position-relative">
+            <button class="btn btn-outline-light collapse-button my-2 position-absolute top-0"
+                style="height: 2.5rem;width: 2.5rem;right: 0.75rem;" type="button" data-bs-toggle="collapse"
+                data-bs-target="#navbarCollapse" aria-expanded="true" aria-controls="navbarCollapse"></button>
+            <div id="navbarCollapse" class="collapse show">
+                <nav class="navbar navbar-expand-md navbar-dark">
+                    <div class="container-fluid">
+                        <a class="navbar-brand" href="./index.html">CyTube Replay</a>
+                        <button class="me-5 navbar-toggler collapsed" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                            aria-expanded="false" aria-label="Toggle navigation">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
+                        <div class="navbar-collapse collapse" id="navbarSupportedContent">
+                            <ul class="col-12 col-md-auto d-flex me-auto navbar-nav">
+                                <li class="col-12 col-md-auto nav-item my-2 my-md-0 ms-md-2">
+                                    <a class="btn btn-outline-light w-100" aria-current="page"
+                                        href="../index.html">Back</a>
+                                </li>
+                            </ul>
+                            <div class="col-12 col-md-auto mb-2 mb-md-0 ms-md-2 d-none">
+                                <div class="input-group">
+                                    <span class="bg-transparent input-group-text text-light" id="speedXLabel">Speed
+                                        x</span>
+                                    <input type="number" class="form-control text-center" aria-describedby="speedXLabel"
+                                        style="width: 4.5rem;" value="1" max="999" min="1" id="speedX">
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-auto mb-2 mb-md-0 ms-md-2 d-none"><button
+                                    class="btn btn-outline-light w-100" id="replayButton">Play</button></div>
+                            <div class="col-12 col-md-auto mb-2 mb-md-0 ms-md-2 d-none">
+                                <div class="btn btn-outline-light disabled w-100">
+                                    Loading&nbsp;<span id="lodingFilename"></span><i class="spinner-border"></i>
+                                </div>
+                            </div>
+                            <div class="col-12 col-md-auto mb-2 mb-md-0 ms-md-2">
+                                <label for="replayFile" class="btn btn-outline-light w-100"><span>Select Replay
+                                        JSON</span><i></i></label>
+                                <input type="file" id="replayFile" class="d-none">
+                            </div>
+                            <div class="me-5" id="navbarEndspacer"></div>
+                        </div>
+                    </div>
+                </nav>
+                <div class="d-none mb-2 text-light" id="replayOut">1</div>
+            </div>
+        </div>
+    </div>
+    <iframe id="replayFrame" class="d-none" src="./iframe/empty.html"></iframe>
+    <script src="./js/replayScript.js"></script>
+    <script src="./npm/bootstrap_5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
