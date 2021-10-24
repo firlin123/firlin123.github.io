@@ -16,11 +16,13 @@ var replayOutElm = document.getElementById('replayOut');
 var replayFrameElm = document.getElementById('replayFrame');
 var speedXElm = document.getElementById('speedX');
 var child = replayFrameElm.contentWindow;
+var fakeConsoleLog = false;
 window.addEventListener('message', onMessage);
 
+replayFrameElm.src='./iframe/empty.html';
 replayFileElm.addEventListener('change', replayFileLoad);
 replayButtonElm.addEventListener('click', replayButtonClick);
-speedXElm.addEventListener('change', speedXChange);
+speedXElm.addEventListener('input', speedXChange);
 
 function onMessage(event) {
     var data = event.data ?? {};
@@ -42,6 +44,7 @@ function receiveMessage(type, data) {
             replayButtonElm.parentElement.classList.remove('d-none');
             speedXElm.parentElement.parentElement.classList.remove('d-none');
             lodingFilenameElm.parentElement.parentElement.classList.add('d-none');
+            playerEvtLog = Array.from(replayJson.eventsLog);
             break;
         default:
             break;
@@ -49,75 +52,123 @@ function receiveMessage(type, data) {
 }
 
 function replayButtonClick(event) {
-    replayPaused = !replayPaused;
-    if (!replayPaused) {
-        play();
+    if (playing) {
+        pause();
     }
     else {
-        pause();
+        play();
     }
 }
 
 function speedXChange(event) {
+    var prevSpeedX = speedX;
     try {
-        speedX = parseInt(speedXElm.value);
-        if (speedX < 1 || speedX > 999) {
+        speedX = Math.floor(parseFloat(speedXElm.value) * 4) / 4;
+        if (speedX > 25) {
+            speedXElm.min = "25";
+            speedXElm.step = "25";
+            speedX = Math.ceil(speedX / 25) * 25;
+            speedXElm.value = speedX;
+        }
+        else if (speedX > 5) {
+            speedXElm.min = "5";
+            speedXElm.step = "5";
+            speedX = Math.ceil(speedX / 5) * 5;
+            speedXElm.value = speedX;
+        }
+        else if (speedX > 2) {
+            speedXElm.min = "1";
+            speedXElm.step = "1";
+            speedX = Math.ceil(speedX);
+            speedXElm.value = speedX;
+        }
+        else {
+            speedXElm.min = "0.25";
+            speedXElm.step = "0.25";
+        }
+        if (speedX < 0.25 || speedX > 999) {
             speedX = 1;
         }
     }
     catch {
         speedX = 1;
     }
-}
-
-function play(start = true) {
-    if (playerEvtLog == null) {
-        playerEvtLog = Array.from(replayJson.eventsLog);
-        lastEventTimeoutLeft = 1000;
-        lastEvent = playerEvtLog[0];
+    if (prevSpeedX != speedX) {
+        if (playing) {
+            pauseEvents();
+            eventsTimeDiff += (Date.now() - pausedAt);
+            pausedAt = null;
+            playEvents();
+        }
+        sendMessage('replay_speed', speedX);
     }
+}
+var pausedAt;
+var playing = false;
+var replay = false;
+function playEvents() {
     if (playerEvtLog.length <= 0) {
-        pause(true);
+        pause();
     }
     else {
-        if (start) {
-            eventsTimeDiff = Date.now() - playerEvtLog[0].time;
-            replayButtonElm.innerText = "Pause";
-            sendMessage('replay_play');
-        }
-        if (lastEventTimeoutLeft == 0) {
-            lastEvent = playerEvtLog.shift();
-        }
-
-        var timeUntilEvent = (lastEvent.time + eventsTimeDiff + lastEventTimeoutLeft) - Date.now();
+        var timeUntilEvent = (playerEvtLog[0].time + eventsTimeDiff) - Date.now();
         if (speedX != 1) {
             eventsTimeDiff -= timeUntilEvent - Math.floor(timeUntilEvent / speedX);
             timeUntilEvent = Math.floor(timeUntilEvent / speedX);
-            //console.log(timeUntilEvent);
         }
         playerTimeout = window.setTimeout(_ => {
-            lastEventTimeoutLeft = 0;
+            lastEvent = playerEvtLog.shift();
             sendMessage('replay_on', { event: lastEvent.event, data: lastEvent.data });
-            play(false);
+            playEvents();
         }, timeUntilEvent);
     }
 }
 
-function pause(end = false) {
-    if (end) {
-        replayButtonElm.innerText = "End";
-        replayButtonElm.classList.add('disabled');
-        replayButtonElm.disabled = true;
-    }
-    else {
-        replayButtonElm.innerText = "Play";
-        if (playerTimeout != null) {
-            window.clearTimeout(playerTimeout);
-            playerTimeout = null;
-            var now = Date.now();
-            lastEventTimeoutLeft = (lastEvent.time + eventsTimeDiff + lastEventTimeoutLeft) - now;
-            sendMessage('replay_pause');
+function pauseEvents() {
+    window.clearTimeout(playerTimeout);
+    pausedAt = Date.now();
+}
+
+function play() {
+    if (!playing) {
+        if (replay) {
+            replay = false;
+            lodingFilenameElm.parentElement.parentElement.classList.remove('d-none');
+            speedXElm.parentElement.parentElement.classList.add('d-none');
+            replayButtonElm.parentElement.classList.add('d-none');
+            replayButtonElm.innerText = "Play";
+            sendMessage('replay_reload');
         }
+        else {
+            playing = true;
+            if (pausedAt != null) {
+                eventsTimeDiff += (Date.now() - pausedAt);
+                pausedAt = null;
+            }
+            else {
+                eventsTimeDiff = Date.now() - playerEvtLog[0].time;
+            }
+            replayButtonElm.innerText = "Pause";
+            sendMessage('replay_play');
+
+            playEvents();
+        }
+    }
+}
+
+function pause(end = false) {
+    if (playing) {
+        playing = false;
+        pauseEvents();
+        if (playerEvtLog.length <= 0) {
+            replayButtonElm.innerText = "Replay";
+            replay = true;
+            pausedAt = null;
+        }
+        else {
+            replayButtonElm.innerText = "Play";
+        }
+        sendMessage('replay_pause');
     }
 }
 
@@ -140,6 +191,7 @@ function replayFileLoad(event) {
                         catch {
                             localStorage['channelPath'] = replayJson.channelPath;
                             localStorage['channelName'] = replayJson.channelName;
+                            localStorage['fakeConsoleLog'] = fakeConsoleLog;
                             setUpLocalStoragePostMessage();
                         }
                         replayFrameElm.classList.remove('d-none');
@@ -184,17 +236,21 @@ function getChannelName() {
     return replayJson.channelName;
 }
 
+function getFakeConsoleLog() {
+    return fakeConsoleLog;
+}
+
 function setUpLocalStoragePostMessage() {
-    child = {w: child};
+    child = { w: child };
     var prefix = 'postMessageChild_' + windowId + "_";
     child.postMessage = function (data) {
         localStorage['postMessageParent_' + windowId + "_" + Date.now()] = JSON.stringify(data);
     }
     window.addEventListener('storage', function (event) {
-        if(event.key?.startsWith(prefix)){
-            try{
+        if (event.key?.startsWith(prefix)) {
+            try {
                 var data = JSON.parse(event.newValue);
-                onMessage({data});
+                onMessage({ data });
             }
             catch (err) {
                 console.error(err);
