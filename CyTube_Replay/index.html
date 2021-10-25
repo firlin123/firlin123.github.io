@@ -2,10 +2,13 @@
 <html lang="en" class="h-100">
 
 <head>
+    <script>
+        if(window.location.protocol == 'file:') window.location.replace('https://redir.firlin123.workers.dev/CyTube_Replay/')
+    </script>
     <link rel="icon" type="image/vnd.microsoft.icon" href="./favicon.ico">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <link href="./npm/bootstrap_5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="./css/bootstrap_5.0.2.min.css" rel="stylesheet">
     <title>CyTube Replay</title>
     <style>
         iframe {
@@ -120,8 +123,9 @@
         </div>
     </div>
     <iframe id="replayFrame" class="d-none"></iframe>
-    <script src="./js/replayScript.js"></script>
-    <script src="./npm/bootstrap_5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="./js/bootstrap_5.0.2.bundle.min.js"></script>
+    <script id="replayScript"></script>
+    <script>document.getElementById('replayScript').src='./js/replayScript.js?_='+Date.now()</script>
 </body>
 
 </html>

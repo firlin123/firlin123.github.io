@@ -2,7 +2,7 @@
 // @name Google Drive Video Player for CyTube Replay
 // @namespace gdcytube
 // @description Play Google Drive videos on CyTube Replay
-// @include */iframe/index.html*
+// @include */CyTube_Replay*
 // @grant unsafeWindow
 // @grant GM_xmlhttpRequest
 // @grant GM.xmlHttpRequest
@@ -12,9 +12,18 @@
 // ==/UserScript==
 
 try {
-    if(unsafeWindow.document.head.id !== "replayWindow"){
-        throw "notReplayWindow";
-    }
+    unsafeWindow.addEventListener('message', (event)=>{
+        var gGDM = event.data?.gGDM;
+        if(typeof gGDM?.id === 'string'){
+            unsafeWindow.getGoogleDriveMetadata(gGDM.id, function (){
+                unsafeWindow.child.postMessage({ 
+                    gGDM: {id: gGDM.id, data: [...arguments]}}, 
+                    unsafeWindow.childOrigin
+                );
+            });
+        }
+    });
+
     function debug(message) {
         try {
             unsafeWindow.console.log('[Drive]', message);

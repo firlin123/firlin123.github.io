@@ -1,10 +1,44 @@
-var windowId;
+var hashParsed;
+try {
+    hashParsed = JSON.parse('[' + decodeURIComponent(location.hash.substr(1)) + ']');
+    if (hashParsed.length < 5) throw "hash decode failed";
+}
+catch (e) {
+    hashParsed = ['r', 'replay', 0];
+    window.addEventListener('load', function () {
+        fake_io_on_exec('connect', []);
+        fake_io_on_exec('emoteList', [[]]);
+        fake_io_on_exec("chatMsg", [{ "username": "CyTube Replay Error", "msg": e, "meta": {}, "time": Date.now() }]);
+        fake_io_on_exec('disconnect', []);
+    });
+}
+var CHANNELPATH = hashParsed[0];
+var CHANNELNAME = hashParsed[1];
+var fakeConsoleLog = hashParsed[2] == 1;
+var parentOrigin = hashParsed[3];
+window.hasDriveUserscript = hashParsed[4] == 1;
 var parent = window.parent;
-var replayIframe = true;
 var speedX = 1;
+
+if (window.hasDriveUserscript) {
+    window.driveUserscriptVersion = hashParsed[5];
+    var gGDMjobs = [];
+    window.getGoogleDriveMetadata = (id, callback) => {
+        gGDMjobs.push({ id, callback });
+        parent.postMessage({ gGDM: { id } }, parentOrigin);
+    };
+    window.addEventListener('message', function (event) {
+        var gGDM = event.data?.gGDM;
+        if (gGDM?.id) {
+            var job = gGDMjobs.find(job => job.id == gGDM.id);
+            if (typeof job?.callback === 'function') job.callback.apply(this, gGDM.data);
+        }
+    });
+}
+
 window.addEventListener('message', onMessage);
 window.addEventListener('load', function (event) {
-    sendMessage('replay_window_loaded');
+    sendMessage('replay_window_loaded', this.location.origin);
 });
 
 function onMessage(event) {
@@ -12,24 +46,6 @@ function onMessage(event) {
     if (data.replayMessage) {
         receiveMessage(data.replayMessage.type, data.replayMessage.data);
     }
-}
-
-var CHANNELPATH;
-var CHANNELNAME;
-var fakeConsoleLog;
-try {
-    CHANNELPATH = parent.getChannelPath?.() ?? 'r';
-    CHANNELNAME = parent.getChannelName?.() ?? 'replay';
-    fakeConsoleLog = parent.getFakeConsoleLog?.() ?? false;
-}
-catch {
-    CHANNELPATH = localStorage['channelPath'] ?? 'r';
-    CHANNELNAME = localStorage['channelName?'] ?? 'replay';
-    fakeConsoleLog = (localStorage['fakeConsoleLog'] ?? "false") === "true";
-    localStorage.removeItem('channelPath');
-    localStorage.removeItem('channelName');
-    localStorage.removeItem('fakeConsoleLog');
-    setUpLocalStoragePostMessage();
 }
 
 function receiveMessage(type, data) {
@@ -49,7 +65,7 @@ function receiveMessage(type, data) {
             PLAYER?.play?.();
             break;
         case "replay_on":
-            if (data.event == "mediaUpdate") { 
+            if (data.event == "mediaUpdate") {
                 PLAYER?.yt?.setPlaybackRate(speedX);
                 PLAYER?.player?.playbackRate(speedX);
             }
@@ -60,33 +76,7 @@ function receiveMessage(type, data) {
     }
 }
 function sendMessage(type, data = null) {
-    parent.postMessage({ replayMessage: { type, data } });
-}
-
-function setUpLocalStoragePostMessage() {
-    parent = { w: parent };
-    try {
-        windowId = parseInt(window.location.href.match(/[\d]+$/));
-    }
-    catch {
-        windowId = Date.now();
-    }
-    var prefix = 'postMessageParent_' + windowId + "_";
-    parent.postMessage = function (data) {
-        localStorage['postMessageChild_' + windowId + "_" + Date.now()] = JSON.stringify(data);
-    }
-    window.addEventListener('storage', function (event) {
-        if (event.key?.startsWith(prefix)) {
-            try {
-                var data = JSON.parse(event.newValue);
-                onMessage({ data });
-            }
-            catch (err) {
-                console.error(err);
-            }
-            localStorage.removeItem(event.key);
-        }
-    });
+    parent.postMessage({ replayMessage: { type, data } }, parentOrigin);
 }
 
 var fake_console_log_log = [];

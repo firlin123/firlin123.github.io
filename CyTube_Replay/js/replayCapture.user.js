@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CyTube Replay Capture
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.12
 // @description  CyTube Replay Capture
 // @author       firlin123
 // @match        https://cytu.be/r/*
@@ -13,7 +13,7 @@
 // @run-at       document-start
 // ==/UserScript==
 
-(function () {
+(function() {
     'use strict';
     window.replayCapture = {
         eventsLog: [],
@@ -28,25 +28,24 @@
         "t;box-shadow:0 0 0 #000;border-color:transparent}.capture-window{position:fixed;bo" +
         "ttom:.5rem;left:.5rem;width:4rem;height:4rem;z-index:999;display:flex;flex-directi" +
         "on:column;overflow:hidden;transition:all .35s ease}.capture-window>:not(:first-chi" +
-        "ld){padding:.5rem}.capture-windowContent{height:100%;display:flex;flex-direction:c" +
-        "olumn}.open .capture-btn-collapse{border-bottom:1rem solid #AAA;border-left:1rem s" +
-        "olid #AAA;border-top:0 solid #AAA;border-right:0 solid #AAA;padding-top:1rem;paddi" +
-        "ng-right:1rem}.capture-btn-collapse{width:3rem;height:3rem;position:absolute;right" +
-        ":.5rem;top:.5rem;background:transparent;border-top:1rem solid #AAA;border-right:1r" +
-        "em solid #AAA;border-bottom:0 solid #AAA;border-left:0 solid #AAA;padding-bottom:1" +
-        "rem;padding-left:1rem;transition:all .35s ease}.capturing .capture-btn-collapse::b" +
-        "efore{content:'';animation:pulse 1.5s ease-in-out infinite}.open .capture-btn-coll" +
-        "apse::before{content:'';border-radius:1rem;left:.5rem;top:0;right:0;bottom:.5rem;p" +
-        "osition:absolute}.capture-btn-collapse::before{opacity:.5;content:'';background:re" +
-        "d;border-radius:1rem;right:.5rem;bottom:0;left:0;top:.5rem;position:absolute;trans" +
-        "ition:all .35s ease}.capture-header{min-height:4rem;display:flex;align-items:cente" +
-        "r;overflow:hidden;white-space:nowrap;margin-right:4rem}.w-100{width:100%}.capture-" +
-        "file-list{border-top:.125rem solid rgba(0,0,0,.35);overflow-x:hidden;overflow-y:au" +
-        "to;flex:1}.capture-file:not(:last-child){border-bottom:.125rem solid rgba(0,0,0,.3" +
-        "5)}.capture-file{padding:.5rem;display:flex;align-items:center;justify-content:spa" +
-        "ce-between}.capture-file-list .btn-group{display:flex;margin-left:.5rem}.capture-f" +
-        "ilename{display:flex;min-width:0}.capture-filename>div:first-child{min-width:0;ove" +
-        "rflow:hidden;text-overflow:ellipsis}";
+        "ld){padding:.5rem}.open .capture-btn-collapse{border-bottom:1rem solid #AAA;border" +
+        "-left:1rem solid #AAA;border-top:0 solid #AAA;border-right:0 solid #AAA;padding-to" +
+        "p:1rem;padding-right:1rem}.capture-btn-collapse{width:3rem;height:3rem;position:ab" +
+        "solute;right:.5rem;top:.5rem;background:transparent;border-top:1rem solid #AAA;bor" +
+        "der-right:1rem solid #AAA;border-bottom:0 solid #AAA;border-left:0 solid #AAA;padd" +
+        "ing-bottom:1rem;padding-left:1rem;transition:all .35s ease}.capturing .capture-btn" +
+        "-collapse::before{content:'';animation:pulse 1.5s ease-in-out infinite}.open .capt" +
+        "ure-btn-collapse::before{content:'';border-radius:1rem;left:.5rem;top:0;right:0;bo" +
+        "ttom:.5rem;position:absolute}.capture-btn-collapse::before{opacity:.5;content:'';b" +
+        "ackground:red;border-radius:1rem;right:.5rem;bottom:0;left:0;top:.5rem;position:ab" +
+        "solute;transition:all .35s ease}.capture-header{padding-right:0!important;min-heig" +
+        "ht:4rem;display:flex;align-items:center;overflow:hidden;white-space:nowrap;margin-" +
+        "right:4rem}.w-100{width:100%}.capture-file-list{border-top:.125rem solid rgba(0,0," +
+        "0,.35);overflow-x:hidden;overflow-y:auto;flex:1}.capture-file:not(:last-child){bor" +
+        "der-bottom:.125rem solid rgba(0,0,0,.35)}.capture-file{padding:.5rem;display:flex;" +
+        "align-items:center;justify-content:space-between}.capture-file-list .btn-group{dis" +
+        "play:flex;margin-left:.5rem}.capture-filename{display:flex;min-width:0}.capture-fi" +
+        "lename>div:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis}";
     // https://github.com/felixge/node-dateformat
     var dateformatMinJS =
         "var token=/d{1,4}|D{3,4}|m{1,4}|yy(?:yy)?|([HhMsTt])\\1?|W{1,2}|[LlopSZN]|\"[^\"]*" +
@@ -184,27 +183,29 @@
         window.removeEventListener('load', myLoad);
     });
 
-    window.addEventListener('beforeunload', function () {
+    window.addEventListener('beforeunload', function() {
         if (replayCapturing) finishCapture();
     });
 
     hookFields(window, [{
         'name': 'socket',
-        'fields': [
-            {
-                'name': 'on', 'hook': function (key) {
+        'fields': [{
+                'name': 'on',
+                'hook': function(key) {
                     subToEvent(key);
                     window.socket.actual_on.apply(this, arguments);
                 }
             },
             {
-                'name': 'once', 'hook': function (key) {
+                'name': 'once',
+                'hook': function(key) {
                     subToEvent(key);
                     window.socket.actual_once.apply(this, arguments);
                 }
             },
             {
-                'name': 'emit', 'hook': function (key, value) {
+                'name': 'emit',
+                'hook': function(key, value) {
                     window.socket.actual_emit.apply(this, arguments);
                 }
             },
@@ -230,8 +231,7 @@
             captureBtn.classList.add('btn-primary');
             captureBtn.classList.remove('btn-danger');
             captureWindow.classList.remove('capturing');
-        }
-        else {
+        } else {
             captureBtn.innerText = 'Reloading page...';
             captureBtn.disabled = true;
             localStorage['replayCapturing'] = true;
@@ -301,8 +301,7 @@
                 if (typeof field.hook !== 'undefined') {
                     object['hooked_' + field.name] = field.hook;
                     getter = () => object['hooked_' + field.name];
-                }
-                else {
+                } else {
                     object['hooked_' + field.name] = true;
                     getter = () => object['actual_' + field.name];
                 }
@@ -311,8 +310,7 @@
                         object['actual_' + field.name] = val;
                         hookFields(val, field.fields);
                     };
-                }
-                else {
+                } else {
                     setter = val => object['actual_' + field.name] = val;
                 }
                 Object.defineProperty(object, field.name, {
@@ -326,7 +324,7 @@
     function subToEvent(key) {
         if (!(subbedEvents.includes(key))) {
             subbedEvents.push(key);
-            window.socket.actual_on(key, function (data) {
+            window.socket.actual_on(key, function(data) {
                 if (replayCapturing) {
                     window.replayCapture.eventsLog.push({
                         time: Date.now(),
@@ -346,7 +344,7 @@
 
         // Escape characters with special meaning either inside or outside character sets.
         // Use a simple backslash escape when it’s always valid, and a `\xnn` escape when
-        //the simpler form would be disallowed by Unicode patterns’ stricter grammar.
+        // the simpler form would be disallowed by Unicode patterns’ stricter grammar.
         return string
             .replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
             .replace(/-/g, '\\x2d');

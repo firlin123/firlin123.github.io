@@ -1,4 +1,4 @@
-var windowId = Date.now();
+var replayFramePath = 'CyTube_Replay/iframe';
 var replayJson = {};
 var replayEmitLog = [];
 var replayPaused = true;
@@ -16,10 +16,11 @@ var replayOutElm = document.getElementById('replayOut');
 var replayFrameElm = document.getElementById('replayFrame');
 var speedXElm = document.getElementById('speedX');
 var child = replayFrameElm.contentWindow;
+var childOrigin;
 var fakeConsoleLog = false;
+
 window.addEventListener('message', onMessage);
 
-replayFrameElm.src='./iframe/empty.html';
 replayFileElm.addEventListener('change', replayFileLoad);
 replayButtonElm.addEventListener('click', replayButtonClick);
 speedXElm.addEventListener('input', speedXChange);
@@ -32,7 +33,7 @@ function onMessage(event) {
 }
 
 function sendMessage(type, data = null) {
-    child.postMessage({ replayMessage: { type, data } });
+    child.postMessage({ replayMessage: { type, data } }, childOrigin);
 }
 
 function receiveMessage(type, data) {
@@ -45,6 +46,7 @@ function receiveMessage(type, data) {
             speedXElm.parentElement.parentElement.classList.remove('d-none');
             lodingFilenameElm.parentElement.parentElement.classList.add('d-none');
             playerEvtLog = Array.from(replayJson.eventsLog);
+            childOrigin = data;
             break;
         default:
             break;
@@ -185,17 +187,20 @@ function replayFileLoad(event) {
                 replayJson = JSON.parse(event.target.result);
                 if (typeof replayJson.channelPath === 'string' && typeof replayJson.channelName === 'string') {
                     if (replayJson.channelPath.length > 0 && replayJson.channelName.length > 0) {
-                        try {
-                            child.toString();
-                        }
-                        catch {
-                            localStorage['channelPath'] = replayJson.channelPath;
-                            localStorage['channelName'] = replayJson.channelName;
-                            localStorage['fakeConsoleLog'] = fakeConsoleLog;
-                            setUpLocalStoragePostMessage();
-                        }
                         replayFrameElm.classList.remove('d-none');
-                        replayFrameElm.src = './iframe/index.html#' + windowId;
+                        var hashArgs = [
+                            replayJson.channelPath,
+                            replayJson.channelName,
+                            fakeConsoleLog ? 1 : 0,
+                            window.location.origin,
+                            window.hasDriveUserscript ? 1 : 0
+                        ]
+                        if(window.hasDriveUserscript) {
+                            hashArgs.push(window.driveUserscriptVersion);
+                        }
+                        var hash = JSON.stringify(hashArgs);
+                        hash = "#" + encodeURIComponent(hash.substr(1, hash.length - 2));
+                        replayFrameElm.src = 'https://redir.firlin123.workers.dev/' + replayFramePath + '/index.html?_=' + Date.now() + hash;
                     }
                     else {
                         replayFileElm.parentElement.classList.remove('d-none');
@@ -226,38 +231,6 @@ function replayFileLoad(event) {
     else {
         replayUiError('Replay', 'no file selected');
     }
-}
-
-function getChannelPath() {
-    return replayJson.channelPath;
-}
-
-function getChannelName() {
-    return replayJson.channelName;
-}
-
-function getFakeConsoleLog() {
-    return fakeConsoleLog;
-}
-
-function setUpLocalStoragePostMessage() {
-    child = { w: child };
-    var prefix = 'postMessageChild_' + windowId + "_";
-    child.postMessage = function (data) {
-        localStorage['postMessageParent_' + windowId + "_" + Date.now()] = JSON.stringify(data);
-    }
-    window.addEventListener('storage', function (event) {
-        if (event.key?.startsWith(prefix)) {
-            try {
-                var data = JSON.parse(event.newValue);
-                onMessage({ data });
-            }
-            catch (err) {
-                console.error(err);
-            }
-            localStorage.removeItem(event.key);
-        }
-    });
 }
 
 function replayUiError(type, message) {
