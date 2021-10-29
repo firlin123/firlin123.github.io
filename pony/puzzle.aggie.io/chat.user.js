@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         puzzle.aggie.io chat
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.2
 // @description  puzzle.aggie.io chat
 // @author       firlin123
 // @match        https://puzzle.aggie.io/*
@@ -76,7 +76,9 @@
                     unsafeWindow.document.body.appendChild(e);
                 }
             } catch (err) {
-                debug('Error fetching "' + resource[1] + '":' + err);
+                var errStr = '';
+                try { errStr = err + ''; } catch (e) { }
+                debug('Error fetching "' + resource[1] + '":' + errStr);
             }
         }
     }
