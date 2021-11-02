@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         puzzle.aggie.io chat
 // @namespace    http://tampermonkey.net/
-// @version      0.2
+// @version      1.0.0
 // @description  puzzle.aggie.io chat
 // @author       firlin123
 // @match        https://puzzle.aggie.io/*
@@ -21,77 +21,38 @@
 (function () {
     'use strict';
     var resources = [
-        ['json', 'https://data.firlin123.workers.dev/emotes?_=' + Date.now(), 'chatEmotes'],
-        ['script', 'http://redir.firlin123.workers.dev/pony/puzzle.aggie.io/chat.code.js?_=' + Date.now()],
-        ['style', 'http://redir.firlin123.workers.dev/pony/puzzle.aggie.io/chat.style.css?_=' + Date.now()],
+        ['script', 'https://redir.firlin123.workers.dev/pony/puzzle.aggie.io/chat.code.js?_=' + Date.now()],
+        ['style', 'https://redir.firlin123.workers.dev/pony/puzzle.aggie.io/chat.style.css?_=' + Date.now()],
     ];
-
-    var mutationBuffer = [];
-    var gmRequest;
+    var gmXHR;
 
     if (typeof GM_xmlhttpRequest === 'undefined') {
         // Assume GM4.0
         debug('Using GM4.0 GM.xmlHttpRequest');
-        gmRequest = GM.xmlHttpRequest;
+        gmXHR = GM.xmlHttpRequest;
     } else {
         debug('Using old-style GM_xmlhttpRequest');
-        gmRequest = GM_xmlhttpRequest;
+        gmXHR = GM_xmlhttpRequest;
     }
-
-    unsafeWindow.onchatmutation = function (mutationsList, chatObserver) {
-        mutationBuffer.push(mutationsList);
-    }
-
-    var chatMutation = function (mutationsList, chatObserver) {
-        for (const mutation of mutationsList) {
-            if (mutation.addedNodes.length > 0) {
-                mutation.addedNodes.forEach(node => {
-                    let chatContent = node.querySelector('.chat-content');
-                    chatContent.innerText = chatContent.innerText;
-                });
-            }
-        }
-        unsafeWindow.onchatmutation(mutationsList, chatObserver);
-    };
-    var chatObserver;
-    (chatObserver = new MutationObserver((a, b) => chatMutation(a, b))).observe(unsafeWindow.document.getElementById('chat-messages'), { childList: true });
-
-    unsafeWindow.chatMutationBuffer = mutationBuffer;
-    unsafeWindow.chatObserver = chatObserver;
-    unsafeWindow.debug = debug;
+    unsafeWindow.gmXHR = gmXHR;
     unsafeWindow.gmFetch = gmFetch;
-
+    unsafeWindow.puzzleAggieIoUserScriptVersion = '1.0.0';
     loadResources();
+
     async function loadResources() {
         for (const resource of resources) {
-            debug('Loding: ', resource);
             try {
                 var response = await gmFetch(resource[1]);
-                if (resource[0] === 'json') {
-                    unsafeWindow[resource[2]] = JSON.parse(response.responseText);
-                }
-                else {
-                    const e = unsafeWindow.document.createElement(resource[0]);
-                    e.innerHTML = response.responseText;
-                    unsafeWindow.document.body.appendChild(e);
-                }
+                var text = await response.text();
+                const e = unsafeWindow.document.createElement(resource[0]);
+                e.innerHTML = text;
+                unsafeWindow.document.body.appendChild(e);
             } catch (err) {
                 var errStr = '';
-                try { errStr = err + ''; } catch (e) { }
-                debug('Error fetching "' + resource[1] + '":' + errStr);
+                try { errStr = '":' + err } catch (e) { }
+                debug('Error fetching "' + resource[1] + '"' + errStr);
             }
         }
-    }
-
-    function gmFetch(url) {
-        return new Promise((resolve, reject) => {
-            gmRequest({
-                method: "GET",
-                url,
-                onload: (response) => resolve(response),
-                onerror: (response) => reject(response)
-            });
-        });
     }
 
     function debug() {
@@ -100,5 +61,56 @@
         } catch (error) {
             unsafeWindow.console.error(error);
         }
+    }
+
+    function gmFetch(url, options = {}) {
+        var p = new Promise((resolve, reject) => {
+            try {
+                var rqOptions = { method: "GET" }
+                for (const option in options) rqOptions[option] = options[option];
+                rqOptions.onload = (xhrResponse) => {
+                    try {
+                        var init = {
+                            status: xhrResponse.status,
+                            statusText: xhrResponse.statusText,
+                            headers: parseHeaders(xhrResponse.responseHeaders)
+                        };
+                        var response = new Response(xhrResponse.responseText, init);
+                        Object.defineProperty(response, "url", { value: xhrResponse.finalUrl });
+                        Object.defineProperty(response, "redirected", { value: (url !== xhrResponse.finalUrl) });
+                        response.xhrResponse = xhrResponse;
+                        resolve(response);
+                    }
+                    catch (error) { reject({ xhrResponse, error }); }
+                };
+                rqOptions.onerror = (response) => reject(response);
+                rqOptions.ontimeout = (response) => reject(response);
+                rqOptions.url = url;
+                gmXHR(rqOptions);
+            } catch (error) { reject(error); }
+        });
+        return p;
+    }
+
+    // https://github.com/kesla/parse-headers
+    function parseHeaders(headers) {
+        if (!headers) return {}
+        var result = {}
+        var trim = s => s.replace(/^\s+|\s+$/g, '');
+        var isArray = a => Object.prototype.toString.call(a) === '[object Array]';
+        var headersArr = trim(headers).split('\n')
+        for (const row of headersArr) {
+            var i = row.indexOf(':');
+            var key = trim(row.slice(0, i)).toLowerCase();
+            var value = trim(row.slice(i + 1));
+            if (typeof (result[key]) === 'undefined') {
+                result[key] = value
+            } else if (isArray(result[key])) {
+                result[key].push(value)
+            } else {
+                result[key] = [result[key], value]
+            }
+        }
+        return result;
     }
 })();

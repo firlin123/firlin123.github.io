@@ -1,56 +1,370 @@
-debug('CODE INIT');
-
-var chatInputElm = document.getElementById('chat-input');
-var sidePanelElm = document.getElementById('side-panel');
-var chatBoxElm = document.getElementById('chat-box');
-var emotesElm = document.createElement('button');
-chatInputElm.addEventListener('keydown', tabKeyDown);
-chatInputElm.realblur = chatInputElm.blur;
-chatInputElm.blur = () => { chatInputBlur(); chatInputElm.realblur() };
-chatInputElm.realfocus = chatInputElm.focus;
-chatInputElm.focus = () => { chatInputFocus(); chatInputElm.realfocus() };
-chatMutationBuffer.forEach(m => chatMutation(m, chatObserver));
-chatMutationBuffer = [];
-window.onchatmutation = chatMutation;
-chatEmotes.forEach(e => e.rex = new RegExp(e.source));
-sidePanelElm.insertBefore(emotesElm, chatBoxElm);
-emotesElm.innerText = 'Emotes List'
-emotesElm.className = 'btn btn-outline-light btn-sm mx-2 d-none';
-emotesElm.id = 'emotes';
-emotesElm.dataset.bsToggle = 'modal';
-emotesElm.dataset.bsTarget = '#emotesModal';
-var emotesModalElm = createEmotesModal();
-
-window.real_onerror = window.onerror;
-window.onerror = function () {
-    if (arguments[4] !== 'sneed ^:)') {
-        if (typeof window.real_onerror === 'function')
-            return window.real_onerror.apply(this, arguments);
-    } else return true;
+var puzzleAggieIoUserScriptVersion = window.puzzleAggieIoUserScriptVersion ?? '0.x';
+if (compareVersion(puzzleAggieIoUserScriptVersion, '1.0.0') === -1) {
+    oldVersion(puzzleAggieIoUserScriptVersion);
+    throw 'Old userscript version';
 }
-MouseEvent.prototype.real_preventDefault = MouseEvent.prototype.preventDefault;
-MouseEvent.prototype.preventDefault = function () {
-    if (emotesModalElm.contains(this.target)) throw 'sneed ^:)';
-    return MouseEvent.prototype.real_preventDefault.apply(this, arguments);
-}
-gcd = (a, b) => !b ? (b === 0 ? a : NaN) : gcd(b, a % b);
-var p1, p2
-window.addEventListener('wheel', function f(e) {
-    p1 = Math.abs(e.wheelDeltaY);
-    p2 = Math.abs(e.deltaY)
-    d = gcd(p2, p1);
-    p1 /= d; p2 /= d;
-    window.removeEventListener('wheel', f);
-    Object.defineProperty(WheelEvent.prototype, 'deltaY', {
-        get: function () {
-            if (emotesModalElm.contains(this.target)) throw 'sneed ^:)';
-            return (-this.wheelDeltaY / p1) * p2;
-        }, set: _ => _
-    });
+
+// General vars
+var chatMessagesElm = document.getElementById('chat-messages') ?? createElement('div');
+
+// Chat history vars
+var imSender = false;
+var showWsLog = localStorage.showWsLog === 'true';
+var chatLogElm = document.getElementById('chat-log') ?? createElement('div');
+var ws = null;
+var roomName = window.ROOM_NAME ?? 'no';
+var userName = localStorage.name;
+var userColor = localStorage.color;
+var newUser = (userName == null || userColor == null);
+var newUserNeedProcessing = false;
+var messageQueue = [];
+var users = [];
+var imSenderPendingMessages = [];
+var imSenderPending = false;
+var processMessage = msgToQueue;
+
+// Emotes vars
+var chatMutationBuffer = [];
+var chatMutationFunc = (m, o) => chatMutationBuffer.push(m);
+var emotesModalElm;
+var chatObserver;
+var chatEmotes = [];
+var chatInputElm = document.getElementById('chat-input') ?? createElement('input');
+var chatBoxElm = document.getElementById('chat-box') ?? createElement('form');
+var sidePanelElm = document.getElementById('side-panel') ?? createElement('div', { innerNodes: [chatBoxElm] });
+var emotesElm = createElement('button', {
+    innerText: 'Emotes List', className: 'btn btn-outline-light btn-sm mx-2 d-none', id: 'emotes'
+}, {
+    'data-bs-toggle': 'modal', 'data-bs-target': '#emotesModal'
 });
-document.body.append(emotesModalElm);
-initBootstrapJs();
 
+// Chat History code
+usersFromDocument();
+
+WebSocket.prototype.realSend = WebSocket.prototype.send;
+WebSocket.prototype.send = wsSend;
+chatHistoryInit();
+
+
+// Emotes code
+(chatObserver = new MutationObserver((a, b) => chatMutationFunc(a, b))).observe(chatMessagesElm, { childList: true });
+(async function () {
+    try {
+        var responce = await (await gmFetch('https://data.firlin123.workers.dev/puzzle.aggie.io/chatemotes')).json();
+        if (responce.error != null) { console.log('Error ' + responce.error) }
+        else chatEmotes = responce;
+    } catch (e) { console.log('Error fetching emotes'); }
+    chatEmotes.forEach(e => e.rex = new RegExp(e.source));
+    chatMutationBuffer.forEach(m => chatMutation(m, chatObserver));
+    chatMutationFunc = chatMutation;
+    chatInputElm.addEventListener('keydown', tabKeyDown);
+    chatInputElm.realblur = chatInputElm.blur;
+    chatInputElm.blur = () => { chatInputBlur(); chatInputElm.realblur() };
+    chatInputElm.realfocus = chatInputElm.focus;
+    chatInputElm.focus = () => { chatInputFocus(); chatInputElm.realfocus() };
+    sidePanelElm.insertBefore(emotesElm, chatBoxElm);
+    emotesModalElm = createEmotesModal();
+
+    preventAppEvents(emotesModalElm);
+    preventAppEvents(emotesElm);
+
+    document.body.append(emotesModalElm);
+    initBootstrapJs();
+})();
+
+// General functions
+function createElement(tag, options = {}, attributes = {}) {
+    var element = document.createElement(tag);
+    for (const option in options) {
+        if (option === 'innerNodes') {
+            options[option].forEach(e => {
+                if (typeof e === 'string')
+                    element.append(document.createTextNode(e))
+                else
+                    element.append(e)
+            });
+        } else {
+            element[option] = options[option];
+        }
+    }
+    for (const attribute in attributes) {
+        element.setAttribute(attribute, attributes[attribute]);
+    }
+    return element;
+}
+
+function oldVersion() {
+    document.getElementById('chat').append(createElement('div', {
+        innerNodes: [
+            'Old version of emotes script.',
+            createElement('br'),
+            'Click ',
+            createElement('a', {
+                innerText: 'here', style: 'color:#fff',
+                href: 'https://redir.firlin123.workers.dev/pony/puzzle.aggie.io/chat.user.js',
+            }),
+            ' to update',
+            createElement('button', {
+                innerText: '×',
+                style: 'position:absolute;right:.4rem;top:0;color:#fff;font-size:1.5rem',
+                onclick: e => e.target.parentElement.remove()
+            })
+        ],
+        style: 'padding:.5rem;background:#111;border-radius:.5rem;margin-right:.3rem;position:relative',
+        id: 'oldVersion'
+    }));
+}
+
+function compareVersion(v1, v2) {
+    if (typeof v1 !== 'string') return -1;
+    if (typeof v2 !== 'string') return -1;
+    v1 = v1.split('.');
+    v2 = v2.split('.');
+    const k = Math.min(v1.length, v2.length);
+    for (let i = 0; i < k; ++i) {
+        v1[i] = parseInt(v1[i], 10);
+        v2[i] = parseInt(v2[i], 10);
+        if (v1[i] > v2[i]) return 1;
+        if (v1[i] < v2[i]) return -1;
+    }
+    return v1.length == v2.length ? 0 : (v1.length < v2.length ? -1 : 1);
+}
+
+// Chat history functions
+function wsSend(data) {
+    var args = arguments;
+    if (ws != this) {
+        ws = this;
+        ws.realOnmessage = ws.onmessage;
+        ws.onmessage = wsMessage;
+        usersFromDocument();
+        checkUsers();
+    }
+    if (typeof data === 'string' && data !== '') {
+        try {
+            json = JSON.parse(data);
+            if (json.type === 'user') {
+                userName = json.name;
+                userColor = json.color;
+                if (newUser && !newUserNeedProcessing) {
+                    newUserNeedProcessing = true;
+                }
+                if (imSender) {
+                    json.name = '\u034f' + json.name;
+                    args[0] = JSON.stringify(json);
+                }
+            }
+            if (showWsLog) console.log('>>', json);
+        } catch (e) { console.log(e); }
+    }
+    WebSocket.prototype.realSend.apply(this, args);
+}
+
+function rgbToHex(color) {
+    var result = '#000000';
+    const matchColors = /rgb\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\)/;
+    const match = matchColors.exec(color);
+    if (match !== null) {
+        var r = 0, g = 0, b = 0;
+        try {
+            r = parseInt(match[1]).toString(16);
+            g = parseInt(match[2]).toString(16);
+            b = parseInt(match[3]).toString(16);
+        } catch (e) { }
+        result = '#' + (r.length == 1 ? '0' + r : r) + (g.length == 1 ? '0' + g : g) + (b.length == 1 ? '0' + b : b);
+    }
+    return result;
+}
+
+function wsMessage(e) {
+    var cancelled = false;
+    var args = arguments;
+    if (typeof e.data === 'string' && e.data !== '') {
+        try {
+            json = JSON.parse(e.data);
+            if (json.type === 'chat') {
+                if (json.name.startsWith('\u034f')) {
+                    json.name = json.name.substring(1);
+                    Object.defineProperty(args[0], "data", { value: JSON.stringify(json) });
+                }
+                var message = {
+                    time: Date.now(),
+                    text: json.message,
+                    userId: json.id,
+                    userName: json.name,
+                    userColor: json.color
+                };
+                if (imSenderPending) imSenderPendingMessages.push(message);
+                else processMessage(message);
+            }
+            else if (json.type == 'users') {
+                users = json.users;
+                if (newUserNeedProcessing) {
+                    newUserNeedProcessing = false;
+                    (async () => {
+                        while (messageQueue.length > 0) {
+                            const message = messageQueue.shift();
+                            await addMessage(message);
+                        }
+                        newUser = false;
+                        checkUsers();
+                        processMessage = mgsToServ;
+                    })();
+                }
+                else checkUsers();
+                data = JSON.parse(e.data);
+                data.users.forEach(u => (u.name = u.name.startsWith('\u034f') ? u.name.substring(1) : u.name));
+                Object.defineProperty(args[0], "data", { value: JSON.stringify(data) });
+            }
+            if (showWsLog) console.log('<<', json);
+        } catch (e) { console.log(e); }
+    }
+    if (!cancelled) ws.realOnmessage.apply(this, args);
+}
+
+function checkUsers() {
+    if (!newUser) {
+        var senders = users.filter(u => u.name.startsWith('\u034f'));
+        var containMe = senders.some(s => (s.name === '\u034f' + userName && s.color === userColor));
+        if (senders.length > 1) {
+            if (containMe && imSender) {
+                imSender = false;
+                ws.realSend(JSON.stringify({ type: "user", name: userName, color: userColor }));
+            }
+        }
+        else if (senders.length == 0) {
+            if (!imSenderPending) {
+                imSenderPending = true;
+                setTimeout(() => {
+                    if (users.filter(u => u.name.startsWith('\u034f')).length == 0) {
+                        imSender = true;
+                        ws.realSend(JSON.stringify({ type: "user", name: '\u034f' + userName, color: userColor }));
+                        imSenderPendingMessages.forEach(processMessage);
+                    }
+                    imSenderPendingMessages = [];
+                    imSenderPending = false;
+                }, Math.floor(Math.random() * 100))
+            }
+        }
+    }
+}
+
+async function addMessage(message) {
+    var data = new FormData();
+    data.append('type', 'addMessage');
+    data.append('room', roomName);
+    data.append('time', message.time);
+    data.append('text', message.text);
+    data.append('userId', message.userId);
+    data.append('userName', message.userName);
+    data.append('userColor', message.userColor);
+    try {
+        const responce = await (await gmFetch(
+            'https://data.firlin123.workers.dev/puzzle.aggie.io/chathistory',
+            { method: "POST", data })
+        ).json();
+        if (responce.error != null) console.log('Error ' + responce.error);
+    } catch (e) { console.log('Error sending message') }
+}
+
+function msgToQueue(message) {
+    messageQueue.push(message);
+}
+
+async function mgsToServ(message) {
+    if (imSender) {
+        processMessage = msgToQueue;
+        while (messageQueue.length > 0) {
+            const messageQ = messageQueue.shift();
+            await addMessage(messageQ);
+        }
+        await addMessage(message);
+        processMessage = mgsToServ;
+    }
+}
+
+async function chatHistoryInit() {
+    const data = new FormData();
+    data.append('type', 'getHistory');
+    data.append('room', roomName);
+    data.append('userName', userName ?? 'no');
+    data.append('userColor', userColor ?? 'no');
+    try {
+        const responce = await (await gmFetch(
+            'https://data.firlin123.workers.dev/puzzle.aggie.io/chathistory',
+            { method: 'POST', data }
+        )).json();
+        if (responce.error != null) console.log('Error ' + responce.error);
+        else {
+            appendMessageHistory(responce);
+            if (!newUser) {
+                while (messageQueue.length > 0) {
+                    const message = messageQueue.shift();
+                    await addMessage(message);
+                }
+                processMessage = mgsToServ;
+            }
+        }
+    }
+    catch (e) { console.log('Error fetching chat history') }
+}
+
+function appendMessageHistory(messages) {
+    var lastChatMessageElm;
+    for (const message of messages) {
+        while (chatMessagesElm.childElementCount > 100) chatMessagesElm.removeChild(chatMessagesElm.firstChild);
+        const date = new Date(message.time);
+        const hours = date.getHours();
+        const minutes = date.getMinutes();
+        const dateStr = (hours < 10 ? ("0" + hours) : hours) + ":" + (minutes < 10 ? ("0" + minutes) : minutes);
+        const chatMessageElm = createElement('div', {
+            className: 'chat-message',
+            innerNodes: [
+                createElement("div", {
+                    innerNodes: [
+                        createElement('div', {
+                            className: 'chat-date',
+                            innerText: dateStr
+                        }),
+                        createElement("div", {
+                            className: 'chat-user',
+                            innerText: message.userName,
+                            style: 'color:' + message.userColor
+                        }),
+                        createElement("div", {
+                            className: 'chat-content',
+                            innerText: message.text,
+                        }),
+                    ]
+                })
+            ]
+        });
+        if (lastChatMessageElm == null) {
+            chatMessagesElm.prepend(chatMessageElm);
+        }
+        else {
+            lastChatMessageElm.insertAdjacentElement('afterend', chatMessageElm);
+        }
+        lastChatMessageElm = chatMessageElm;
+        setTimeout((function () { return chatLogElm.scrollTop = 1e6 }));
+    }
+}
+
+function usersFromDocument() {
+    users = [];
+    for (userElm of document.getElementsByClassName('user')) {
+        const color = userElm.firstChild.style.backgroundColor;
+        var nameStr = userElm.lastChild.textContent;
+        userElm.lastChild.textContent = nameStr = nameStr.startsWith('\u034f') ? nameStr.substring(1) : nameStr;
+        var user = {
+            'name': nameStr,
+            'color': color.startsWith('rgb') ? rgbToHex(color) : color
+        }
+        users.push(user);
+    }
+}
+
+// Emotes functions
 function tabKeyDown(event) {
     if (event.key === 'Tab') {
         var insertText = '\t';
@@ -373,15 +687,9 @@ function createEmotesModal() {
     return modal;
 }
 
-function createElement(tag, options = {}, attributes = {}) {
-    var element = document.createElement(tag);
-    for (const option in options) {
-        element[option] = options[option];
-    }
-    for (const attribute in attributes) {
-        element.setAttribute(attribute, attributes[attribute]);
-    }
-    return element;
+function preventAppEvents(element) {
+    var events = ['mousedown', 'mousemove', 'mouseup', 'touchstart', 'touchmove', 'touchend', 'wheel'];
+    events.map(event => element.addEventListener(event, e => e.stopPropagation()));
 }
 
 function initBootstrapJs() {
