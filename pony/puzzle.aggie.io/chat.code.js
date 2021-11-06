@@ -1,5 +1,5 @@
 var puzzleAggieIoUserScriptVersion = window.puzzleAggieIoUserScriptVersion ?? '0.x';
-if (compareVersion(puzzleAggieIoUserScriptVersion, '1.0.1') === -1) {
+if (compareVersion(puzzleAggieIoUserScriptVersion, '1.0.2') === -1) {
     oldVersion(puzzleAggieIoUserScriptVersion);
     throw 'Old userscript version';
 }

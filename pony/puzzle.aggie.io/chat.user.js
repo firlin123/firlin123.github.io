@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         puzzle.aggie.io chat
 // @namespace    http://tampermonkey.net/
-// @version      1.0.1
+// @version      1.0.2
 // @description  puzzle.aggie.io chat
 // @author       firlin123
 // @match        https://puzzle.aggie.io/*
@@ -36,9 +36,9 @@
     }
     unsafeWindow.gmXHR = gmXHR;
     unsafeWindow.gmFetch = gmFetch;
-    unsafeWindow.puzzleAggieIoUserScriptVersion = '1.0.1';
-    loadResources();
-
+    unsafeWindow.puzzleAggieIoUserScriptVersion = '1.0.2';
+    unsafeWindow.addEventListener('load', loadResources);
+  
     async function loadResources() {
         for (const resource of resources) {
             try {
