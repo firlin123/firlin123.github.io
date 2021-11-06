@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         puzzle.aggie.io chat
 // @namespace    http://tampermonkey.net/
-// @version      1.0.0
+// @version      1.0.1
 // @description  puzzle.aggie.io chat
 // @author       firlin123
 // @match        https://puzzle.aggie.io/*
@@ -21,8 +21,8 @@
 (function () {
     'use strict';
     var resources = [
-        ['script', 'https://redir.firlin123.workers.dev/pony/puzzle.aggie.io/chat.code.js?_=' + Date.now()],
-        ['style', 'https://redir.firlin123.workers.dev/pony/puzzle.aggie.io/chat.style.css?_=' + Date.now()],
+        ['script', 'https://firlin123.github.io/pony/puzzle.aggie.io/chat.code.js?_=' + Date.now()],
+        ['style', 'https://firlin123.github.io/pony/puzzle.aggie.io/chat.style.css?_=' + Date.now()],
     ];
     var gmXHR;
 
@@ -36,7 +36,7 @@
     }
     unsafeWindow.gmXHR = gmXHR;
     unsafeWindow.gmFetch = gmFetch;
-    unsafeWindow.puzzleAggieIoUserScriptVersion = '1.0.0';
+    unsafeWindow.puzzleAggieIoUserScriptVersion = '1.0.1';
     loadResources();
 
     async function loadResources() {

@@ -1,5 +1,5 @@
 var puzzleAggieIoUserScriptVersion = window.puzzleAggieIoUserScriptVersion ?? '0.x';
-if (compareVersion(puzzleAggieIoUserScriptVersion, '1.0.0') === -1) {
+if (compareVersion(puzzleAggieIoUserScriptVersion, '1.0.1') === -1) {
     oldVersion(puzzleAggieIoUserScriptVersion);
     throw 'Old userscript version';
 }
@@ -14,11 +14,14 @@ var chatLogElm = document.getElementById('chat-log') ?? createElement('div');
 var ws = null;
 var roomName = window.ROOM_NAME ?? 'no';
 var userName = localStorage.name;
-var userColor = localStorage.color;
+var userColor = document.getElementsByClassName('user')[0].firstChild.style.backgroundColor;
+if (userColor.startsWith('rgb')) userColor = rgbToHex(userColor);//localStorage.color;
 var newUser = (userName == null || userColor == null);
 var newUserNeedProcessing = false;
 var messageQueue = [];
 var users = [];
+var knownUsers = [];
+var extensionUsers = [];
 var imSenderPendingMessages = [];
 var imSenderPending = false;
 var processMessage = msgToQueue;
@@ -101,7 +104,7 @@ function oldVersion() {
             'Click ',
             createElement('a', {
                 innerText: 'here', style: 'color:#fff',
-                href: 'https://redir.firlin123.workers.dev/pony/puzzle.aggie.io/chat.user.js',
+                href: 'https://firlin123.github.io/pony/puzzle.aggie.io/chat.user.js',
             }),
             ' to update',
             createElement('button', {
@@ -145,7 +148,9 @@ function wsSend(data) {
             json = JSON.parse(data);
             if (json.type === 'user') {
                 userName = json.name;
-                userColor = json.color;
+                userColor = document.getElementsByClassName('user')[0].firstChild.style.backgroundColor;
+                if (userColor.startsWith('rgb')) userColor = rgbToHex(userColor);//json.color;
+                updateExtensionUsers();
                 if (newUser && !newUserNeedProcessing) {
                     newUserNeedProcessing = true;
                 }
@@ -179,6 +184,7 @@ function rgbToHex(color) {
 function wsMessage(e) {
     var cancelled = false;
     var args = arguments;
+    var usersEvent = false;
     if (typeof e.data === 'string' && e.data !== '') {
         try {
             json = JSON.parse(e.data);
@@ -198,7 +204,9 @@ function wsMessage(e) {
                 else processMessage(message);
             }
             else if (json.type == 'users') {
+                usersEvent = true;
                 users = json.users;
+                updateKnownUsers();
                 if (newUserNeedProcessing) {
                     newUserNeedProcessing = false;
                     (async () => {
@@ -220,6 +228,66 @@ function wsMessage(e) {
         } catch (e) { console.log(e); }
     }
     if (!cancelled) ws.realOnmessage.apply(this, args);
+    if (usersEvent) {
+        updateExtensionUsersElms();
+    }
+}
+
+function updateKnownUsers() {
+    var knownUsersChanged = false;
+    users.forEach(user => {
+        var uName = user.name.startsWith('\u034f') ? user.name.substring(1) : user.name;
+        var uColor = user.color;
+        if (!(knownUsers.some(u => u.name === uName && u.color === uColor))) {
+            knownUsers.push({ 'name': uName, 'color': uColor });
+            knownUsersChanged = true;
+        }
+    });
+    if (knownUsersChanged) updateExtensionUsers();
+}
+
+async function updateExtensionUsers() {
+    var data = new FormData();
+    data.append('type', 'getUsers');
+    data.append('room', roomName);
+    data.append('userName', userName ?? 'no');
+    data.append('userColor', userColor ?? 'no');
+    try {
+        const responce = await (await gmFetch(
+            'https://data.firlin123.workers.dev/puzzle.aggie.io/chathistory',
+            { method: "POST", data })
+        ).json();
+        if (responce.error != null) console.log('Error ' + responce.error);
+        else {
+            extensionUsers = responce;
+        }
+    } catch (e) { console.log('Error getting extension users') }
+    updateExtensionUsersElms();
+}
+
+function updateExtensionUsersElms() {
+    const userElms = Array.from(document.getElementsByClassName('user'));
+    for (const extensionUser of extensionUsers) {
+        var eName = extensionUser.name;
+        var eColor = extensionUser.color;
+        if (!(knownUsers.some(u => u.name === eName && u.color === eColor))) {
+            knownUsers.push({ 'name': eName, 'color': eColor });
+        }
+        var matchingUsersElms = userElms.filter(userElm => {
+            var elName = userElm.lastChild.textContent;
+            if (elName.startsWith('\u034f')) elName = elName.substring(1);
+            var elColor = userElm.firstChild.style.backgroundColor;
+            if (elColor.startsWith('rgb')) elColor = rgbToHex(elColor);
+            return eName === elName && eColor === elColor;
+        });
+        matchingUsersElms.forEach(mUE => {
+            var ext = createElement('span', {
+                className: 'emote-user', title: 'This user has emotes plugin', innerText: '(emt)',
+            });
+            preventAppEvents(ext);
+            mUE.insertAdjacentElement('beforeEnd', ext);
+        });
+    }
 }
 
 function checkUsers() {
@@ -287,8 +355,6 @@ async function chatHistoryInit() {
     const data = new FormData();
     data.append('type', 'getHistory');
     data.append('room', roomName);
-    data.append('userName', userName ?? 'no');
-    data.append('userColor', userColor ?? 'no');
     try {
         const responce = await (await gmFetch(
             'https://data.firlin123.workers.dev/puzzle.aggie.io/chathistory',
@@ -362,6 +428,7 @@ function usersFromDocument() {
         }
         users.push(user);
     }
+    updateKnownUsers();
 }
 
 // Emotes functions
@@ -430,27 +497,57 @@ function chatMutation(mutationsList, chatObserver) {
         if (mutation.addedNodes.length > 0) {
             mutation.addedNodes.forEach(node => {
                 var contentElm = node.querySelector('.chat-content');
-                var str = contentElm.innerText;
-                var text = contentElm.firstChild;
-                var emoteTextNodes = [];
-                var matches;
-                do {
-                    matches = [];
-                    for (const emote of chatEmotes) {
-                        if ((match = text.textContent.match(emote.rex)) != null) matches.push([match, emote]);
+                var lines = contentElm.innerText.split('\n');
+                contentElm.innerHTML = '';
+                for (const line of lines) {
+                    var text = document.createTextNode(line);
+                    var emoteTextNodes = [];
+                    var matches;
+                    if (line.startsWith('>')) {
+                        var end = text.splitText(1);
+                        contentElm.append(createElement('span', { className: 'greentext', innerNodes: [text, end] }));
+                        text = end;
+                    } else {
+                        contentElm.append(text);
                     }
-                    if (matches.length > 0) {
-                        var minIndex = matches.reduce((p, c) => p[0].index < c[0].index ? p : c);
-                        var minIndexMatch = minIndex[0];
-                        var length = minIndexMatch[0].substr(minIndexMatch[1].length).length;
-                        var start = minIndexMatch.index + minIndexMatch[1].length;
-                        var emoteTextNode = text.splitText(start);
-                        text = emoteTextNode.splitText(length);
-                        emoteTextNodes.push([emoteTextNode, minIndex[1]]);
+                    do {
+                        matches = [];
+                        var match;
+                        for (const emote of chatEmotes) {
+                            if ((match = text.textContent.match(emote.rex)) != null) matches.push([match, emote]);
+                        }
+                        if (matches.length > 0) {
+                            var minIndex = matches.reduce((p, c) => p[0].index < c[0].index ? p : c);
+                            var minIndexMatch = minIndex[0];
+                            var length = minIndexMatch[0].substr(minIndexMatch[1].length).length;
+                            var start = minIndexMatch.index + minIndexMatch[1].length;
+                            var emoteTextNode = text.splitText(start);
+                            text = emoteTextNode.splitText(length);
+                            emoteTextNodes.push([emoteTextNode, minIndex[1]]);
+                        }
+                    } while (matches.length > 0);
+                    for (const emote of emoteTextNodes) {
+                        emote[0].parentElement.replaceChild(createEmote(emote[1]), emote[0]);
                     }
-                } while (matches.length > 0);
-                for (const emote of emoteTextNodes) {
-                    contentElm.replaceChild(createEmote(emote[1]), emote[0]);
+                    var texts = Array.from(text.parentElement.childNodes).filter(n => n.textContent != null);
+                    for (var text of texts) {
+                        var match;
+                        var urlTextNodes = [];
+                        do {
+                            var match = text.textContent.match(/([hH][tT]{2}[pP][sS]?:\/\/)?([-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/=]*))/);
+                            if (match != null) {
+                                var length = match[0].length;
+                                var start = match.index;
+                                var urlTextNode = text.splitText(start);
+                                text = urlTextNode.splitText(length);
+                                urlTextNodes.push(urlTextNode);
+                            }
+                        } while (match != null);
+                        for (const url of urlTextNodes) {
+                            var urlStr = url.textContent.replace(/^([hH][tT]{2}[pP]([sS])?:\/\/)?/, 'http$2://');
+                            url.parentElement.replaceChild(createElement('a', { href: urlStr, innerText: url.textContent, target: '_blank' }), url);
+                        }
+                    }
                 }
             });
         }
