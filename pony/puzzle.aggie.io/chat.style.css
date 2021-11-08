@@ -56,7 +56,7 @@
     max-height: 100%;
 }
 
-.emote-user {
+.script-user > span[title] {
     font-size: .7rem;
     opacity: 0.5;
     vertical-align: middle;
