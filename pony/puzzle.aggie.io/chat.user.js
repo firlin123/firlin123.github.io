@@ -384,7 +384,6 @@
                 removedScriptUsers.push(user);
             }
         }
-        debugger;
         for (const user of window.scriptUsers) {
             if (!(newUsers.some(u => u.id === user.id))) {
                 removedScriptUsers.push(user);
