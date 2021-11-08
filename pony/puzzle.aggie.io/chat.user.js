@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         puzzle.aggie.io chat
 // @namespace    http://tampermonkey.net/
-// @version      1.1.2
+// @version      1.1.3
 // @description  puzzle.aggie.io chat
 // @author       firlin123
 // @match        https://puzzle.aggie.io/*
@@ -17,7 +17,7 @@
     'use strict';
 
     // General vars&constants
-    const puzzleAggieIoUserScriptVersion = '1.1.2';
+    const puzzleAggieIoUserScriptVersion = '1.1.3';
     const dataServer = 'data.firlin123.workers.dev';
     const resourceServer = 'firlin123.github.io';
     const shownLogs = JSON.parse(localStorage.shownLogs ?? '{}');
@@ -297,6 +297,12 @@
             }
             me.id = id;
         }
+        if (!(scriptUsers.some(u => exactSameUser(u, me)))) {
+            if (user.name !== '' && user.color !== '') {
+                update = true;
+                //debugger;
+            }
+        }
         if (me.name !== user.name || me.color !== user.color || update) {
             update = true;
             data.append('id', me.id);
@@ -316,6 +322,7 @@
                 else {
                     window.senderId = responce.senderId;
                     window.scriptUsers = responce.users;
+                    meUpdate(me, me.id);
                     checkCurrentUsers(currentUsers);
                 }
             } catch (e) { log('fetch_err', 'Error updating script users', e) }
@@ -385,7 +392,7 @@
             }
         }
         for (const user of window.scriptUsers) {
-            if (!(newUsers.some(u => u.id === user.id))) {
+            if (!(newUsers.some(u => exactSameUser(u, user)))) {
                 removedScriptUsers.push(user);
             }
         }
@@ -412,6 +419,7 @@
             else {
                 window.senderId = responce.senderId;
                 window.scriptUsers = responce.users;
+                meUpdate(me, me.id);
             }
         } catch (e) { log('fetch_err', 'Error removing script users', e) }
         qUnlock(lock);
@@ -446,6 +454,7 @@
             else {
                 window.senderId = responce.senderId;
                 window.scriptUsers = responce.users;
+                meUpdate(me, me.id);
                 for (const user of knownUsers) {
                     if (window.scriptUsers.some(u => exactSameUser(u, user))) {
                         user.script = true;
