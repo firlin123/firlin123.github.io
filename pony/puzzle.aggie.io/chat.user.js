@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         puzzle.aggie.io chat
 // @namespace    http://tampermonkey.net/
-// @version      1.1.1
+// @version      1.1.2
 // @description  puzzle.aggie.io chat
 // @author       firlin123
 // @match        https://puzzle.aggie.io/*
@@ -17,7 +17,7 @@
     'use strict';
 
     // General vars&constants
-    const puzzleAggieIoUserScriptVersion = '1.1.1';
+    const puzzleAggieIoUserScriptVersion = '1.1.2';
     const dataServer = 'data.firlin123.workers.dev';
     const resourceServer = 'firlin123.github.io';
     const shownLogs = JSON.parse(localStorage.shownLogs ?? '{}');
@@ -316,6 +316,7 @@
                 else {
                     window.senderId = responce.senderId;
                     window.scriptUsers = responce.users;
+                    checkCurrentUsers(currentUsers);
                 }
             } catch (e) { log('fetch_err', 'Error updating script users', e) }
             qUnlock(lock);
@@ -379,7 +380,13 @@
         }
         var removedScriptUsers = [];
         for (const user of removedUsers) {
-            if (scriptUsers.some(u => u.id === user.id)) {
+            if (window.scriptUsers.some(u => u.id === user.id)) {
+                removedScriptUsers.push(user);
+            }
+        }
+        debugger;
+        for (const user of window.scriptUsers) {
+            if (!(newUsers.some(u => u.id === user.id))) {
                 removedScriptUsers.push(user);
             }
         }
@@ -441,7 +448,7 @@
                 window.senderId = responce.senderId;
                 window.scriptUsers = responce.users;
                 for (const user of knownUsers) {
-                    if (scriptUsers.some(u => exactSameUser(u, user))) {
+                    if (window.scriptUsers.some(u => exactSameUser(u, user))) {
                         user.script = true;
                     }
                 }
