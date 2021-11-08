@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         puzzle.aggie.io chat
 // @namespace    http://tampermonkey.net/
-// @version      1.1.0
+// @version      1.1.1
 // @description  puzzle.aggie.io chat
 // @author       firlin123
 // @match        https://puzzle.aggie.io/*
@@ -17,12 +17,12 @@
     'use strict';
 
     // General vars&constants
-    const puzzleAggieIoUserScriptVersion = '1.1.0';
+    const puzzleAggieIoUserScriptVersion = '1.1.1';
     const dataServer = 'data.firlin123.workers.dev';
     const resourceServer = 'firlin123.github.io';
-    const chatMessagesElm = document.getElementById('chat-messages') ?? createElement('div');
-    const chatLogElm = document.getElementById('chat-log') ?? createElement('div');
     const shownLogs = JSON.parse(localStorage.shownLogs ?? '{}');
+    var chatMessagesElm = document.getElementById('chat-messages') ?? createElement('div');
+    var chatLogElm = document.getElementById('chat-log') ?? createElement('div');
     var isOldVersion = false;
 
     // Message history vars&constants
@@ -70,9 +70,7 @@
     window.RealWebSocket = window.WebSocket;
     window.WebSocket = FakeWebSocket;
 
-
     // Emotes code
-    (chatObserver = new MutationObserver((a, b) => chatMutationFunc(a, b))).observe(chatMessagesElm, { childList: true });
     fetch('https://' + dataServer + '/puzzle.aggie.io/chatemotes').then(r => r.json()).then(json => {
         if (!promiseFinished) {
             promiseFinished = true;
@@ -85,32 +83,19 @@
     window.addEventListener('load', async () => {
         if (!windowLoaded) {
             document.body.append(createElement('link', { rel: 'stylesheet', href: 'https://' + resourceServer + '/pony/puzzle.aggie.io/chat.style.css?_=' + Date.now() }));
+            chatMessagesElm = document.getElementById('chat-messages') ?? chatMessagesElm;
+            chatLogElm = document.getElementById('chat-log') ?? chatLogElm;
+            chatInputElm = document.getElementById('chat-input') ?? chatInputElm;
+            chatBoxElm = document.getElementById('chat-box') ?? chatBoxElm;
+            sidePanelElm = document.getElementById('side-panel') ?? sidePanelElm;
+
+            (chatObserver = new MutationObserver((a, b) => chatMutationFunc(a, b))).observe(chatMessagesElm, { childList: true });
             windowLoaded = true;
             if (promiseFinished) {
                 emotesInit();
             }
         }
     });
-
-    function emotesInit() {
-        chatEmotes.forEach(e => e.rex = new RegExp(e.source));
-        chatMutationBuffer.forEach(m => chatMutation(m, chatObserver));
-        chatMutationFunc = chatMutation;
-
-        chatInputElm.addEventListener('keydown', tabKeyDown);
-        chatInputElm.realblur = chatInputElm.blur;
-        chatInputElm.blur = () => { chatInputBlur(); chatInputElm.realblur() };
-        chatInputElm.realfocus = chatInputElm.focus;
-        chatInputElm.focus = () => { chatInputFocus(); chatInputElm.realfocus() };
-        sidePanelElm.insertBefore(emotesElm, chatBoxElm);
-        emotesModalElm = createEmotesModal();
-
-        preventAppEvents(emotesModalElm);
-        preventAppEvents(emotesElm);
-
-        document.body.append(emotesModalElm);
-        initBootstrapJs();
-    }
 
     // General functions
     function createElement(tag, options = {}, attributes = {}) {
@@ -524,6 +509,26 @@
 
 
     // Emotes functions
+    function emotesInit() {
+        chatEmotes.forEach(e => e.rex = new RegExp(e.source));
+        chatMutationBuffer.forEach(m => chatMutation(m, chatObserver));
+        chatMutationFunc = chatMutation;
+
+        chatInputElm.addEventListener('keydown', tabKeyDown);
+        chatInputElm.realblur = chatInputElm.blur;
+        chatInputElm.blur = () => { chatInputBlur(); chatInputElm.realblur() };
+        chatInputElm.realfocus = chatInputElm.focus;
+        chatInputElm.focus = () => { chatInputFocus(); chatInputElm.realfocus() };
+        sidePanelElm.insertBefore(emotesElm, chatBoxElm);
+        emotesModalElm = createEmotesModal();
+
+        preventAppEvents(emotesModalElm);
+        preventAppEvents(emotesElm);
+
+        document.body.append(emotesModalElm);
+        initBootstrapJs();
+    }
+
     function tabKeyDown(event) {
         if (event.key === 'Tab') {
             var insertText = '\t';
@@ -883,7 +888,7 @@
 
     function initBootstrapJs() {
         document.body.append(createElement('script', {
-            src: 'https://'+ resourceServer +'/pony/puzzle.aggie.io/bootstrap_5.0.2.min.js'
+            src: 'https://' + resourceServer + '/pony/puzzle.aggie.io/bootstrap_5.0.2.min.js'
         }));
     }
 })();
