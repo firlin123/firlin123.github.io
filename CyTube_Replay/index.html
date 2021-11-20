@@ -3,7 +3,7 @@
 
 <head>
     <script>
-        if(window.location.protocol == 'file:') window.location.replace('https://redir.firlin123.workers.dev/CyTube_Replay/')
+        if (window.location.protocol == 'file:') window.location.replace('https://firlin123.github.io/CyTube_Replay/')
     </script>
     <link rel="icon" type="image/vnd.microsoft.icon" href="./favicon.ico">
     <meta charset="utf-8">
@@ -22,6 +22,18 @@
         .collapse-button {
             display: inline-flex;
             padding: 0.5rem;
+            top: 0;
+            transition: top .15s ease-in-out;
+        }
+
+        @media (min-width: 992px) {
+            .collapse-button {
+                top: 0.2rem;
+            }
+        }
+
+        .collapse-button.collapsed {
+            top: 0;
         }
 
         .collapse-button:not(.collapsed)::before,
@@ -75,11 +87,12 @@
 <body class="h-100 bg-secondary d-flex flex-column">
     <div class="bg-dark px-3">
         <div id="header" class="d-flex bg-dark position-relative">
-            <button class="btn btn-outline-light collapse-button my-2 position-absolute top-0"
+            <button class="btn btn-outline-light collapse-button my-2 position-absolute"
                 style="height: 2.5rem;width: 2.5rem;right: 0.75rem;" type="button" data-bs-toggle="collapse"
-                data-bs-target="#navbarCollapse" aria-expanded="true" aria-controls="navbarCollapse"></button>
+                data-bs-target="#navbarCollapse" aria-expanded="true" id="hideNavBar"
+                aria-controls="navbarCollapse"></button>
             <div id="navbarCollapse" class="collapse show">
-                <nav class="navbar navbar-expand-md navbar-dark">
+                <nav class="navbar navbar-expand-xl navbar-dark">
                     <div class="container-fluid">
                         <a class="navbar-brand" href="./index.html">CyTube Replay</a>
                         <button class="me-5 navbar-toggler collapsed" type="button" data-bs-toggle="collapse"
@@ -88,44 +101,102 @@
                             <span class="navbar-toggler-icon"></span>
                         </button>
                         <div class="navbar-collapse collapse" id="navbarSupportedContent">
-                            <ul class="col-12 col-md-auto d-flex me-auto navbar-nav">
-                                <li class="col-12 col-md-auto nav-item my-2 my-md-0 ms-md-2">
-                                    <a class="btn btn-outline-light w-100" aria-current="page"
-                                        href="../index.html">Back</a>
-                                </li>
-                            </ul>
-                            <div class="col-12 col-md-auto mb-2 mb-md-0 ms-md-2 d-none">
-                                <div class="input-group">
-                                    <span class="bg-transparent input-group-text text-light" id="speedXLabel">Speed
-                                        x</span>
-                                    <input type="number" class="form-control text-center" aria-describedby="speedXLabel"
-                                        style="width: 4.5rem;" value="1" max="100" min="0.25" step="0.25" id="speedX">
+                            <div class="d-flex flex-wrap w-100">
+                                <ul class="col-12 col-xl-auto d-flex me-auto navbar-nav">
+                                    <!-- <li class="col-12 col-xl-auto nav-item my-1 ms-xl-2">
+                                        <a class="btn btn-outline-light w-100" aria-current="page"
+                                            href="../index.html">Back</a>
+                                    </li> -->
+                                    <li class="nav-item d-flex align-items-center">
+                                        <a class="nav-link" aria-current="page" href="../index.html">Home</a>
+                                    </li>
+                                    <li class="nav-item d-flex align-items-center">
+                                        <a class="nav-link" aria-current="page" href="./mapper.html">Mapper</a>
+                                    </li>
+                                </ul>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2">
+                                    <div class="btn-group w-100">
+                                        <span class="bg-transparent input-group-text text-light" id="speedXLabel">
+                                            Select replay
+                                        </span>
+                                        <label for="inputFile" class="btn btn-outline-light">Json/Zip</label>
+                                        <input autocomplete="false" type="file" id="inputFile" class="d-none">
+                                        <input autocomplete="false" type="file" id="inputFolder" class="d-none"
+                                            webkitdirectory directory multiple>
+                                        <label for="inputFolder" class="btn btn-outline-light">Folder</label>
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="col-12 col-md-auto mb-2 mb-md-0 ms-md-2 d-none"><button
-                                    class="btn btn-outline-light w-100" id="replayButton">Play</button></div>
-                            <div class="col-12 col-md-auto mb-2 mb-md-0 ms-md-2 d-none">
-                                <div class="btn btn-outline-light disabled w-100">
-                                    Loading&nbsp;<span id="lodingFilename"></span><i class="spinner-border"></i>
+                                <div class="col-12 col-xl-2 my-1 ms-xl-2 d-none">
+                                    <select class="form-select" id="selectFile"></select>
                                 </div>
-                            </div>
-                            <div class="col-12 col-md-auto mb-2 mb-md-0 ms-md-2">
-                                <label for="replayFile" class="btn btn-outline-light w-100"><span>Select Replay
-                                        JSON</span><i></i></label>
-                                <input autocomplete="false" type="file" id="replayFile" class="d-none">
+                                <div class="col-12 col-xl-2 my-1 ms-xl-2 d-none" style="width:6.5rem">
+                                    <select class="form-select" id="selectSkipTo">
+                                        <option value="skipTo">Skip To</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2 d-none">
+                                    <div class="input-group">
+                                        <span class="bg-transparent input-group-text text-light" id="speedXLabel">Speed
+                                            x</span>
+                                        <input type="number" class="form-control text-center"
+                                            aria-describedby="speedXLabel" style="width: 4.5rem;" value="1" max="100"
+                                            min="0.25" step="0.25" id="speedX">
+                                    </div>
+                                </div>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2 d-none">
+                                    <button class="btn btn-outline-light w-100" id="playPause">Play</button>
+                                </div>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2 d-none">
+                                    <div class="btn btn-outline-light disabled w-100">
+                                        Loading&nbsp;<span id="loading"></span><i class="spinner-border"></i>
+                                    </div>
+                                </div>
+                                <!-- <div class="col-12 col-xl-auto my-1 ms-xl-2">
+                                    <button class="btn btn-outline-light w-100">text</button>
+                                </div>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2">
+                                    <button class="btn btn-outline-light w-100">text</button>
+                                </div>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2">
+                                    <button class="btn btn-outline-light w-100">text</button>
+                                </div>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2">
+                                    <button class="btn btn-outline-light w-100">text</button>
+                                </div>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2">
+                                    <button class="btn btn-outline-light w-100">text</button>
+                                </div>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2">
+                                    <button class="btn btn-outline-light w-100">text</button>
+                                </div>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2">
+                                    <button class="btn btn-outline-light w-100">text</button>
+                                </div>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2">
+                                    <button class="btn btn-outline-light w-100">text</button>
+                                </div>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2">
+                                    <button class="btn btn-outline-light w-100">text</button>
+                                </div>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2">
+                                    <button class="btn btn-outline-light w-100">text</button>
+                                </div>
+                                <div class="col-12 col-xl-auto my-1 ms-xl-2">
+                                    <button class="btn btn-outline-light w-100">text</button>
+                                </div> -->
                             </div>
                             <div class="me-5" id="navbarEndspacer"></div>
                         </div>
                     </div>
                 </nav>
-                <div class="d-none mb-2 text-light" id="replayOut">1</div>
+                <div class="text-light" id="out"></div>
             </div>
         </div>
     </div>
-    <iframe id="replayFrame" class="d-none"></iframe>
+    <iframe id="iframe" class="d-none"></iframe>
     <script src="./js/bootstrap_5.0.2.bundle.min.js"></script>
     <script id="replayScript"></script>
-    <script>document.getElementById('replayScript').src='./js/replayScript.js?_='+Date.now()</script>
+    <script>document.getElementById('replayScript').src = './js/replayScript.js?_=' + Date.now()</script>
 </body>
 
 </html>

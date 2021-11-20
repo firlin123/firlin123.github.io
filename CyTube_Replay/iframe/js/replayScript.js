@@ -43,11 +43,18 @@ window.addEventListener('load', function (event) {
 
 function onMessage(event) {
     var data = event.data ?? {};
+    if (data.blob) {
+        var vid = document.createElement('video');
+        vid.controls = true;
+        vid.src = URL.createObjectURL(data.blob);
+        document.body.append(vid);
+    }
     if (data.replayMessage) {
         receiveMessage(data.replayMessage.type, data.replayMessage.data);
     }
 }
 
+var blobUrls = [];
 function receiveMessage(type, data) {
     switch (type) {
         case "replay_reload":
@@ -64,12 +71,25 @@ function receiveMessage(type, data) {
         case "replay_play":
             PLAYER?.play?.();
             break;
-        case "replay_on":
-            if (data.event == "mediaUpdate") {
+        case "replay_event":
+            if (data.type == "changeMedia") {
+                if (typeof data.data[0].id !== 'string') {
+                    var blobUrl = blobUrls.find(b => b.blobId == data.data[0].blobId);
+                    if (blobUrl == null) {
+                        blobUrl = {
+                            blobId: data.data[0].blobId,
+                            url: URL.createObjectURL(data.data[0].id)
+                        };
+                        blobUrls.push(blobUrl);
+                    }
+                    data.data[0].id = blobUrl.url;
+                }
+            }
+            if (data.type == "mediaUpdate") {
                 PLAYER?.yt?.setPlaybackRate(speedX);
                 PLAYER?.player?.playbackRate(speedX);
             }
-            fake_io_on_exec(data.event, data.data);
+            fake_io_on_exec(data.type, data.data);
             break;
         default:
             break;

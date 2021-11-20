@@ -897,7 +897,7 @@
     alertBox.appendChild(document.createElement('br'));
     infoLink = document.createElement('a');
     infoLink.className = 'btn btn-info';
-    infoLink.href = 'https://redir.firlin123.workers.dev/CyTube_Replay/js/cytube-google-drive.user.js';
+    infoLink.href = 'https://firlin123.github.io/CyTube_Replay/js/cytube-google-drive.user.js';
     infoLink.target = '_blank';
     infoLink.textContent = 'Click here to install userscript';
     infoLink.target = '_blank';

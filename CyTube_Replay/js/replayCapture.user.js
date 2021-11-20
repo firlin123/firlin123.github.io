@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CyTube Replay Capture
 // @namespace    http://tampermonkey.net/
-// @version      0.12
+// @version      1.0.1
 // @description  CyTube Replay Capture
 // @author       firlin123
 // @match        https://cytu.be/r/*
@@ -13,14 +13,15 @@
 // @run-at       document-start
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
-    window.replayCapture = {
+    var replayCapture = {
         eventsLog: [],
         channelPath: '',
         channelName: '',
+        replayFileType: 'data',
+        replayFileVersion: '1.0.0'
     }
-
     var replayCapturing = localStorage['replayCapturing'] === 'true';
     var styleMinCss =
         "@keyframes pulse{0%{opacity:.25}50%{opacity:1}100%{opacity:.25}}.capture-window.op" +
@@ -47,7 +48,7 @@
         "play:flex;margin-left:.5rem}.capture-filename{display:flex;min-width:0}.capture-fi" +
         "lename>div:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis}";
     // https://github.com/felixge/node-dateformat
-    var dateformatMinJS =
+    var dateformatMinJs =
         "var token=/d{1,4}|D{3,4}|m{1,4}|yy(?:yy)?|([HhMsTt])\\1?|W{1,2}|[LlopSZN]|\"[^\"]*" +
         "\"|'[^']*'/g;var timezone=/\\b(?:[A-Z]{1,3}[A-Z][TC])(?:[-+]\\d{4})?|((?:Australia" +
         "n )?(?:Pacific|Mountain|Central|Eastern|Atlantic) (?:Standard|Daylight|Prevailing)" +
@@ -125,11 +126,13 @@
         "eek(date){var dow=date.getDay();if(dow===0){dow=7}return dow};var formatTimezone=f" +
         "unction formatTimezone(date){return(String(date).match(timezone)||[\"\"]).pop().re" +
         "place(timezoneClip,\"\").replace(/GMT\\+0000/g,\"UTC\")};";
-    window.eval(dateformatMinJS);
+    window.eval(dateformatMinJs);
+    window.replayCapture = replayCapture;
 
     var subbedEvents = [];
     var chName = '';
     var chPath = '';
+    var autoSaveInrervalId;
     var captureFilename;
     var captureWindow = mkElem('div', {
         className: 'capture-window modal-content' + (replayCapturing ? ' capturing ' : '')
@@ -154,6 +157,7 @@
         onclick: _ => captureWindow.classList.toggle('open')
     });
     var style = mkElem('style', { innerHTML: styleMinCss });
+    var db;
     captureBtnContainer.append(captureBtn);
     captureWindow.append(captureCollapseBtn);
     captureWindow.append(captureHeader);
@@ -161,17 +165,19 @@
     captureWindow.append(captureFileList);
     captureWindow.append(style);
 
-    window.addEventListener('load', function myLoad() {
-        chPath = window.replayCapture.channelPath = window.CHANNELPATH;
-        chName = window.replayCapture.channelName = window.CHANNELNAME;
+    window.addEventListener('load', async function myLoad() {
+        chPath = replayCapture.channelPath = window.CHANNELPATH;
+        chName = replayCapture.channelName = window.CHANNELNAME;
 
         var rex = new RegExp(
             "^" + escapeStringRegexp(chName) + "_[\\d]{14}.json$"
         );
-        for (const key in localStorage) {
+        db = await openIDB();
+        window.db = db;
+        for (const key of (await db.keys())) {
             if (key.match(rex)) {
                 var lastDiv = mkElem('div', { className: 'capture-file' });
-                appendDownloadLinks(lastDiv, localStorage[key], key);
+                await appendDownloadLinks(lastDiv, (await db.get(key)), key);
                 captureFileList.append(lastDiv);
             }
         }
@@ -183,32 +189,32 @@
         window.removeEventListener('load', myLoad);
     });
 
-    window.addEventListener('beforeunload', function() {
-        if (replayCapturing) finishCapture();
+    window.addEventListener('beforeunload', async function () {
+        if (replayCapturing) await finishCapture();
     });
 
     hookFields(window, [{
         'name': 'socket',
         'fields': [{
-                'name': 'on',
-                'hook': function(key) {
-                    subToEvent(key);
-                    window.socket.actual_on.apply(this, arguments);
-                }
-            },
-            {
-                'name': 'once',
-                'hook': function(key) {
-                    subToEvent(key);
-                    window.socket.actual_once.apply(this, arguments);
-                }
-            },
-            {
-                'name': 'emit',
-                'hook': function(key, value) {
-                    window.socket.actual_emit.apply(this, arguments);
-                }
-            },
+            'name': 'on',
+            'hook': function (key) {
+                subToEvent(key);
+                window.socket.actual_on.apply(this, arguments);
+            }
+        },
+        {
+            'name': 'once',
+            'hook': function (key) {
+                subToEvent(key);
+                window.socket.actual_once.apply(this, arguments);
+            }
+        },
+            // {
+            //     'name': 'emit',
+            //     'hook': function(key, value) {
+            //         window.socket.actual_emit.apply(this, arguments);
+            //     }
+            // },
         ]
     }]);
 
@@ -222,9 +228,9 @@
         return elm;
     }
 
-    function toggleCapture() {
+    async function toggleCapture() {
         if (replayCapturing) {
-            finishCapture();
+            await finishCapture();
             localStorage['replayCapturing'] = replayCapturing = false;
             captureBtn.innerText = 'Start';
             captureBtn.title = 'Start capture';
@@ -241,6 +247,9 @@
 
     function startCapture() {
         captureFilename = chName + '_' + dateFormat(new Date(), 'yyyymmddhhMMss') + '.json';
+        autoSaveInrervalId = window.setInterval(
+            async _ => await db.set(captureFilename, JSON.stringify(replayCapture)), 120000
+        );
         var name = captureFilename;
         var file = mkElem('div', { className: 'capture-file' });
         var fileName = mkElem('div', {
@@ -257,13 +266,17 @@
         captureFileList.append(file);
     }
 
-    function finishCapture() {
-        var text = JSON.stringify(window.replayCapture);
-        appendDownloadLinks(captureFileList.lastElementChild, text, captureFilename);
+    async function finishCapture() {
+        if (autoSaveInrervalId != null) {
+            window.clearInterval(autoSaveInrervalId);
+            autoSaveInrervalId = null;
+        }
+        var text = JSON.stringify(replayCapture);
+        await appendDownloadLinks(captureFileList.lastElementChild, text, captureFilename);
     }
 
-    function appendDownloadLinks(div, text, name) {
-        localStorage[name] = text;
+    async function appendDownloadLinks(div, text, name) {
+        await db.set(name, text);
         div.innerHTML = '';
         var btnGroup = mkElem('div', { className: 'btn-group' });
         btnGroup.append(mkElem('a', {
@@ -277,8 +290,10 @@
             innerHTML: '<span class="glyphicon glyphicon-trash"></span>',
             title: 'Remove ' + name,
             href: '#',
-            onclick: _ => {
-                localStorage.removeItem(name);
+            onclick: async _ => {
+                if((await db.keys()).includes(name)){
+                    await db.delete(name);
+                }
                 div.remove();
             },
             className: 'btn btn-danger btn-sm'
@@ -324,11 +339,11 @@
     function subToEvent(key) {
         if (!(subbedEvents.includes(key))) {
             subbedEvents.push(key);
-            window.socket.actual_on(key, function(data) {
+            window.socket.actual_on(key, function () {
                 if (replayCapturing) {
-                    window.replayCapture.eventsLog.push({
+                    replayCapture.eventsLog.push({
                         time: Date.now(),
-                        event: key,
+                        type: key,
                         data: JSON.parse(JSON.stringify([...arguments]))
                     });
                 }
@@ -348,5 +363,34 @@
         return string
             .replace(/[|\\{}()[\]^$+*?.]/g, '\\$&')
             .replace(/-/g, '\\x2d');
+    }
+
+    function openIDB() {
+        return new Promise((resolve, reject) => {
+            var indexedDB = window.indexedDB || window.mozIndexedDB || window.webkitIndexedDB || window.msIndexedDB || window.shimIndexedDB;
+            var open = indexedDB.open("ReplayCapture", 1);
+            open.onupgradeneeded = function () {
+                try { open.result.createObjectStore("ReplayObjectStore", { keyPath: "name" }); } catch (err) { reject(err); }
+            };
+            open.onsuccess = async _ => {
+                var db = open.result;
+                function request(fname, args = [], result = null) {
+                    return new Promise((rResolve, rReject) => {
+                        var tx = db.transaction("ReplayObjectStore", ((fname === 'put' || fname === 'delete') ? 'readwrite' : 'readonly'));
+                        var store = tx.objectStore("ReplayObjectStore");
+                        var rq = store[fname](...args);
+                        rq.onsuccess = _ => rResolve((result == null) ? rq.result : rq.result[result]);
+                        rq.oneror = _ => rReject(rq.error);
+                    });
+                }
+                var getKeys = async () => await request('getAllKeys');
+                var deleteKey = async (key, value) => await request('delete', [key]);
+                var setValue = async (key, value) => await request('put', [{ name: key, text: value }]);
+                var getValue = async (key) => await request('get', [key], 'text');
+                const outObj = { set: setValue, get: getValue, keys: getKeys, close: db.close, delete: deleteKey };
+                resolve(outObj);
+            }
+            open.oneror = _ => reject(open.error);
+        });
     }
 })();

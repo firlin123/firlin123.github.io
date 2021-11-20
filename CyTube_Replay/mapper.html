@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en" class="h-100">
+
+<head>
+    <script>
+        if (window.location.protocol == 'file:') window.location.replace('https://redir.firlin123.workers.dev/CyTube_Replay/')
+    </script>
+    <link rel="icon" type="image/vnd.microsoft.icon" href="./favicon.ico">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="./css/bootstrap_5.0.2.min.css" rel="stylesheet">
+    <title>CyTube Replay Mapper</title>
+    <style>
+        i.spinner-border {
+            margin-left: 0.5rem;
+            width: 1rem;
+            height: 1rem;
+        }
+    </style>
+</head>
+
+<body class="h-100 bg-secondary">
+    <div class="bg-dark">
+        <nav class="navbar navbar-expand-md navbar-dark px-3">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="./index.html">CyTube Replay</a>
+                <button class="navbar-toggler collapsed" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                    aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="navbar-collapse collapse" id="navbarSupportedContent">
+                    <ul class="col-12 col-md-auto d-flex me-auto navbar-nav">
+                        <li class="nav-item d-flex align-items-center">
+                            <a class="nav-link" aria-current="page" href="../index.html">Home</a>
+                        </li>
+                        <li class="nav-item d-flex align-items-center">
+                            <a class="nav-link active" aria-current="page" href="./mapper.html">Mapper</a>
+                        </li>
+                    </ul>
+                    <div class="col-12 col-md-2 my-1 ms-md-2 d-none">
+                        <select class="form-select" id="selectFile"></select>
+                    </div>
+                    <div class="col-12 col-md-auto my-1 ms-md-2">
+                        <div class="btn-group w-100">
+                            <span class="bg-transparent input-group-text text-light" id="speedXLabel">
+                                Select replay
+                            </span>
+                            <label for="inputFile" class="btn btn-outline-light">Json/Zip</label>
+                            <input autocomplete="false" type="file" id="inputFile" class="d-none">
+                            <input autocomplete="false" type="file" id="inputFolder" class="d-none" webkitdirectory
+                                directory multiple>
+                            <label for="inputFolder" class="btn btn-outline-light">Folder</label>
+                        </div>
+                    </div>
+                    <div class="col-12 col-md-auto my-1 ms-md-2 d-none">
+                        <div class="btn btn-outline-light disabled w-100">
+                            Loading&nbsp;<span id="loading"></span><i class="spinner-border"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <div class="px-3" id="out"></div>
+    </div>
+    <div class="container-fluid text-light d-none">
+        <h3>Media files:</h3>
+        <div class="d-flex flex-wrap">
+            <div class="col-12 col-lg-6 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">Folder</span>
+                    <select class="form-select" id="addFileSelect"></select>
+                    <input autocomplete="false" type="file" id="inputOtherFile" class="d-none">
+                    <label for="inputFolder" class="btn btn-success">Add file</label>
+                </div>
+            </div>
+            <div class="col-12 col-lg-6 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">Path</span>
+                    <input class="form-control" placeholder="/path/folder_name">
+                    <button class="btn btn-success">Add folder</button>
+                </div>
+            </div>
+        </div>
+        <div id="otherFiles" class="d-flex flex-wrap">
+            <!-- <div class="col-12 col-lg-6 col-xxl-4 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">File</span>
+                    <select class="form-select" style="max-width:8rem">
+                        <option>/videos</option>
+                        <option>/kek/123</option>
+                    </select>
+                    <input class="form-control" placeholder="file_name.mp4" value="/videos/file1.mp4">
+                    <button class="btn btn-primary">As video</button>
+                    <button class="btn btn-danger">Remove</button>
+                </div>
+                <video class="d-none border col-12 mt-2 p-2 rounded-3" controls
+                    src="http://0.0.0.0:8001/CyTube_Replay_data/MlpRewatch/2021.10.24/videos/stickmare.mp4"></video>
+            </div>
+            <div class="col-12 col-lg-6 col-xxl-4 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">File</span>
+                    <input class="form-control" placeholder="/path/file_name.mp4" value="/videos/file2.mp4">
+                    <button class="btn btn-primary">As video</button>
+                    <button class="btn btn-danger">Remove</button>
+                </div>
+                <video class="d-none border col-12 mt-2 p-2 rounded-3" controls
+                    src="http://0.0.0.0:8001/CyTube_Replay_data/MlpRewatch/2021.10.24/videos/stickmare.mp4"></video>
+            </div>
+            <div class="col-12 col-lg-6 col-xxl-4 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">File</span>
+                    <input class="form-control" placeholder="/path/file_name.mp4" value="/videos/file3.mp4">
+                    <button class="btn btn-primary">As video</button>
+                    <button class="btn btn-danger">Remove</button>
+                </div>
+                <video class="d-none border col-12 mt-2 p-2 rounded-3" controls
+                    src="http://0.0.0.0:8001/CyTube_Replay_data/MlpRewatch/2021.10.24/videos/stickmare.mp4"></video>
+            </div>
+            <div class="col-12 col-lg-6 col-xxl-4 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">File</span>
+                    <input class="form-control" placeholder="/path/file_name.mp4" value="/videos/file4.mp4">
+                    <button class="btn btn-primary">As video</button>
+                    <button class="btn btn-danger">Remove</button>
+                </div>
+                <video class="d-none border col-12 mt-2 p-2 rounded-3" controls
+                    src="http://0.0.0.0:8001/CyTube_Replay_data/MlpRewatch/2021.10.24/videos/stickmare.mp4"></video>
+            </div>
+            <div class="col-12 col-lg-6 col-xxl-4 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">File</span>
+                    <input class="form-control" placeholder="/path/file_name.mp4" value="/videos/file5.mp4">
+                    <button class="btn btn-primary">As video</button>
+                    <button class="btn btn-danger">Remove</button>
+                </div>
+                <video class="d-none border col-12 mt-2 p-2 rounded-3" controls
+                    src="http://0.0.0.0:8001/CyTube_Replay_data/MlpRewatch/2021.10.24/videos/stickmare.mp4"></video>
+            </div>
+            <div class="col-12 col-lg-6 col-xxl-4 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">File</span>
+                    <input class="form-control" placeholder="/path/file_name.mp4" value="/videos/file6.mp4">
+                    <button class="btn btn-primary">As video</button>
+                    <button class="btn btn-danger">Remove</button>
+                </div>
+                <video class="d-none border col-12 mt-2 p-2 rounded-3" controls
+                    src="http://0.0.0.0:8001/CyTube_Replay_data/MlpRewatch/2021.10.24/videos/stickmare.mp4"></video>
+            </div>
+            <div class="col-12 col-lg-6 col-xxl-4 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">File</span>
+                    <input class="form-control" placeholder="/path/file_name.mp4" value="/videos/file7.mp4">
+                    <button class="btn btn-primary">As video</button>
+                    <button class="btn btn-danger">Remove</button>
+                </div>
+                <video class="d-none border col-12 mt-2 p-2 rounded-3" controls
+                    src="http://0.0.0.0:8001/CyTube_Replay_data/MlpRewatch/2021.10.24/videos/stickmare.mp4"></video>
+            </div>
+            <div class="col-12 col-lg-6 col-xxl-4 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">File</span>
+                    <input class="form-control" placeholder="/path/file_name.mp4" value="/videos/file8.mp4">
+                    <button class="btn btn-primary">As video</button>
+                    <button class="btn btn-danger">Remove</button>
+                </div>
+                <video class="d-none border col-12 mt-2 p-2 rounded-3" controls
+                    src="http://0.0.0.0:8001/CyTube_Replay_data/MlpRewatch/2021.10.24/videos/stickmare.mp4"></video>
+            </div>
+            <div class="col-12 col-lg-6 col-xxl-4 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">File</span>
+                    <input class="form-control" placeholder="/path/file_name.mp4" value="/videos/file9.mp4">
+                    <button class="btn btn-primary">As video</button>
+                    <button class="btn btn-danger">Remove</button>
+                </div>
+                <video class="d-none border col-12 mt-2 p-2 rounded-3" controls
+                    src="http://0.0.0.0:8001/CyTube_Replay_data/MlpRewatch/2021.10.24/videos/stickmare.mp4"></video>
+            </div>
+            <div class="col-12 col-lg-6 col-xxl-4 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">File</span>
+                    <input class="form-control" placeholder="/path/file_name.mp4" value="/videos/file10.mp4">
+                    <button class="btn btn-primary">As video</button>
+                    <button class="btn btn-danger">Remove</button>
+                </div>
+                <video class="d-none border col-12 mt-2 p-2 rounded-3" controls
+                    src="http://0.0.0.0:8001/CyTube_Replay_data/MlpRewatch/2021.10.24/videos/stickmare.mp4"></video>
+            </div>
+            <div class="col-12 col-lg-6 col-xxl-4 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">File</span>
+                    <input class="form-control" placeholder="/path/file_name.mp4" value="/videos/file11.mp4">
+                    <button class="btn btn-primary">As video</button>
+                    <button class="btn btn-danger">Remove</button>
+                </div>
+                <video class="d-none border col-12 mt-2 p-2 rounded-3" controls
+                    src="http://0.0.0.0:8001/CyTube_Replay_data/MlpRewatch/2021.10.24/videos/stickmare.mp4"></video>
+            </div>
+            <div class="col-12 col-lg-6 col-xxl-4 p-2">
+                <div class="input-group">
+                    <span class="input-group-text">File</span>
+                    <input class="form-control" placeholder="/path/file_name.mp4"
+                        value="/videos/file11jgfgdsfjgsfdjgfdsgfkdfsghkfjagkhffsdjgfkjhaghfsgfhjsagfhsgfjhsadgjkasgdhjgsadkjhgdsfgasjdf.mp4">
+                    <button class="btn btn-primary">As video</button>
+                    <button class="btn btn-danger">Remove</button>
+                </div>
+                <video class="d-none border col-12 mt-2 p-2 rounded-3" controls
+                    src="http://0.0.0.0:8001/CyTube_Replay_data/MlpRewatch/2021.10.24/videos/stickmare.mp4"></video>
+            </div> -->
+
+
+        </div>
+    </div>
+    <script src="./js/bootstrap_5.0.2.bundle.min.js"></script>
+    <script id="mapperScript"></script>
+    <script>document.getElementById('mapperScript').src = './js/mapperScript.js?_=' + Date.now()</script>
+</body>
+
+</html>
