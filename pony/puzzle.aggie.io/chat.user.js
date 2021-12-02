@@ -906,4 +906,23 @@
             src: 'https://' + resourceServer + '/pony/puzzle.aggie.io/bootstrap_5.0.2.min.js'
         }));
     }
+    // Brightness Slider
+    document.addEventListener ("DOMContentLoaded", DOM_ContentReady);
+    function DOM_ContentReady () {
+    var html = '<div><label>Brightness</label><input type="range" min="0" max="5" value="1" class="slider" id="BrightnessRange" step="0.01" style="font-size: 16px; -webkit-transition: .2s; transition: opacity .2s; height: 12px; width: 100%;"><p>Value: <span id="ShowThis"></span></p></div>'
+    console.log ("Successfully loaded slider");
+    document.getElementById("user-form-content").insertAdjacentHTML('afterbegin', html);
+    document.body.classList.toggle("brightness");
+    var x = document.getElementsByClassName("brightness")[0];
+    x.id = "brightness"
+    var slider = document.getElementById("BrightnessRange");
+    var output = document.getElementById("ShowThis");
+    output.innerHTML = slider.value;
+    slider.oninput = function () {
+    output.innerHTML = this.value;
+    var amount = this.value;
+    var brightness = document.getElementById('brightness');
+    brightness.setAttribute("style", "filter:brightness(" + amount + ");");
+    }
+    }
 })();
