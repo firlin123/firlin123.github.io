@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         puzzle.aggie.io chat
 // @namespace    http://tampermonkey.net/
-// @version      1.1.3
+// @version      1.1.4
 // @description  puzzle.aggie.io chat
 // @author       firlin123
 // @match        https://puzzle.aggie.io/*
@@ -17,7 +17,7 @@
     'use strict';
 
     // General vars&constants
-    const puzzleAggieIoUserScriptVersion = '1.1.3';
+    const puzzleAggieIoUserScriptVersion = '1.1.4';
     const dataServer = 'data.firlin123.workers.dev';
     const resourceServer = 'firlin123.github.io';
     const shownLogs = JSON.parse(localStorage.shownLogs ?? '{}');
