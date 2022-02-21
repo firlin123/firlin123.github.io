@@ -1,6 +1,6 @@
 "use strict";
 const fakeConsoleLog = false;
-const iframeProto = 'https:';
+const iframeProto = 'http:';
 const iframePath = 'CyTube_Replay/iframe';
 var currentEventsLog;
 var pausedAt;
@@ -345,7 +345,7 @@ async function loadReplayFile(loadingReplayFile) {
         }
         var hash = JSON.stringify(hashArgs);
         hash = "#" + encodeURIComponent(hash.substr(1, hash.length - 2));
-        var url = iframeProto + '//firlin123.github.io/' + iframePath + '/index.html?_=' + Date.now() + hash;
+        var url = iframeProto + '//0.0.0.0:8003/' + iframePath + '/index.html?_=' + Date.now() + hash;
         await loadIframe(url);
     } else {
         throw 'empty eventsLog, channelName or channelPath';

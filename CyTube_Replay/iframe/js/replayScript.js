@@ -55,7 +55,7 @@ function onMessage(event) {
 }
 
 var blobUrls = [];
-function receiveMessage(type, data) {
+async function receiveMessage(type, data) {
     switch (type) {
         case "replay_reload":
             window.location.reload();
@@ -83,6 +83,16 @@ function receiveMessage(type, data) {
                         blobUrls.push(blobUrl);
                     }
                     data.data[0].id = blobUrl.url;
+                } else if (data.data[0].id.startsWith("https://media.xaekai.net/")) {
+                    var bcp = JSON.parse(JSON.stringify(data));
+                    try {
+                        var xaeResp = await fetch(data.data[0].id);
+                        var xae = await xaeResp.json();
+                        data.data[0].meta.direct = Object.fromEntries(xae.sources.map(a => [a.quality + '', [{ link: a.url, quality: a.quality, contentType: a.contentType }]]));
+                    }
+                    catch (ex) {
+                        data = bcp;
+                    }
                 }
             }
             if (data.type == "mediaUpdate") {
