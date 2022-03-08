@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CyTube Replay Capture
 // @namespace    http://tampermonkey.net/
-// @version      1.1.0
+// @version      1.1.1
 // @description  CyTube Replay Capture
 // @author       firlin123
 // @match        https://cytu.be/r/*
@@ -16,7 +16,7 @@
 
 (function () {
     let scriptName = 'cytubeReplayCapture';
-    let scriptVersion = { major: 1, minor: 1, patch: 0 };
+    let scriptVersion = { major: 1, minor: 1, patch: 1 };
     let scriptUpdateUrl = 'https://firlin123.github.io/cytube-replay/assets/replay-capture.user.js';
 
     function main(name, fromLocalStorage, updateUrl) {
@@ -512,6 +512,10 @@
 
     let scriptChangeLog = [
         {
+            version: { major: 1, minor: 1, patch: 1 }, changes: [
+                'Auto update test'
+            ]
+        },{
             version: { major: 1, minor: 1, patch: 0 }, changes: [
                 'Auto update',
                 'Alternative hook method',
