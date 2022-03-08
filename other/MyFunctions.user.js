@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         My Functions
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.2
 // @description  My functions
 // @author       Me
 // @match        *://*/*
@@ -12,7 +12,7 @@
 // @downloadURL  https://firlin123.github.io/other/MyFunctions.user.js
 // ==/UserScript==
 
-(function() {
+(function () {
     'use strict';
     window.myFunctions_DownloadString = function (text, filename = 'out.json', type = "application/json") {
         const a = document.createElement("a");
@@ -21,5 +21,23 @@
         a.click();
         window.URL.revokeObjectURL(a.href);
     }
+    window.myFunctions_UploadString = async function (timeout) {
+        return await new Promise((resolve, reject) => {
+            let timeoutId = undefined;
+            let fileIn = document.createElement('input');
+            if (typeof timeout === 'number' && timeout > 0)
+                timeoutId = setTimeout(() => reject('Timeout'), timeout);
+            fileIn.type = 'file';
+            fileIn.onchange = e => {
+                let reader = new FileReader();
+                reader.onload = () => {
+                    if (timeoutId != null)
+                        clearTimeout(timeoutId);
+                    resolve(reader.result);
+                };
+                reader.readAsText(fileIn.files[0]);
+            };
+            fileIn.click();
+        });
+    }
 })();
-
