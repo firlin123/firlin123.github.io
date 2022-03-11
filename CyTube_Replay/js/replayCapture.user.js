@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CyTube Replay Capture
 // @namespace    http://tampermonkey.net/
-// @version      1.1.1
+// @version      1.1.2
 // @description  CyTube Replay Capture
 // @author       firlin123
 // @match        https://cytu.be/r/*
@@ -16,18 +16,23 @@
 
 (function () {
     let scriptName = 'cytubeReplayCapture';
-    let scriptVersion = { major: 1, minor: 1, patch: 1 };
+    let scriptVersion = { major: 1, minor: 1, patch: 2 };
     let scriptUpdateUrl = 'https://firlin123.github.io/cytube-replay/assets/replay-capture.user.js';
 
     function main(name, fromLocalStorage, updateUrl) {
         'use strict';
         let versionStr = versionToString(window[name + 'Version']);
+
         let replayCapture = {
+            start: null,
+            end: Date.now(),
             eventsLog: [],
+            site: location.host,
+            name: '',
             channelPath: '',
             channelName: '',
             replayFileType: 'data',
-            replayFileVersion: '1.0.0'
+            replayFileVersion: '1.1.0'
         }
         let capName = 'replayCapturing';
         let capRex = location.pathname.match(/^\/r\/(.*)$/);
@@ -62,7 +67,7 @@
             "-footer{border-top:.125rem solid rgba(0,0,0,.35);max-height:22rem;overflow:auto;pa" +
             "dding:0!important}.capture-footer-div{position:sticky;top:0;width:100%;padding:.5r" +
             "em;border:0;border-radius:0;}.capture-changelog{padding:.5rem}.capture-changelog i" +
-            "mg{max-width:8rem;max-height:8rem}";
+            "mg{max-width:8rem;max-height:8rem}.capture-name{width:100%;margin-right:.5rem}";
         // https://github.com/felixge/node-dateformat
         let dateformatMinJs =
             "var token=/d{1,4}|D{3,4}|m{1,4}|yy(?:yy)?|([HhMsTt])\\1?|W{1,2}|[LlopSZN]|\"[^\"]*" +
@@ -234,9 +239,11 @@
             }
 
             document.body.append(captureWindow);
+            replayCapture.end = Date.now();
             // Begin auto-update
             document.body.append(scr);
             window.removeEventListener('load', myLoad);
+            replayCapture.end = Date.now();
         });
 
         window.addEventListener('beforeunload', async function () {
@@ -248,11 +255,14 @@
 
         let onAny = (key, data) => {
             if (replayCapturing) {
+                let now = Date.now();
+                if (replayCapture.start == null) replayCapture.start = now;
                 replayCapture.eventsLog.push({
-                    time: Date.now(),
+                    time: now,
                     type: key,
                     data: JSON.parse(JSON.stringify(data != null ? [data] : []))
                 });
+                replayCapture.end = now;
             }
         };
         let onConnect = () => onAny('connect');
@@ -360,7 +370,10 @@
         function startCapture() {
             captureFilename = chName + '_' + dateFormat(new Date(), 'yyyymmddHHMMss') + '.json';
             autoSaveInrervalId = window.setInterval(
-                async () => await db.set(captureFilename, JSON.stringify(replayCapture)), 120000
+                async () => {
+                    replayCapture.end = Date.now();
+                    await db.set(captureFilename, JSON.stringify(replayCapture));
+                }, 120000
             );
             let name = captureFilename;
             let file = mkElem('div', { className: 'capture-file' });
@@ -379,6 +392,7 @@
         }
 
         async function finishCapture() {
+            replayCapture.end = Date.now();
             if (autoSaveInrervalId != null) {
                 window.clearInterval(autoSaveInrervalId);
                 autoSaveInrervalId = null;
@@ -388,16 +402,63 @@
         }
 
         async function appendDownloadLinks(div, text, name) {
+            let obj, downloadA, fileName, captureName, saveBtn, btnGroup;
+            obj = JSON.parse(text);
             await db.set(name, text);
             div.innerHTML = '';
-            let btnGroup = mkElem('div', { className: 'btn-group' });
+            fileName = mkElem('div', {
+                className: 'capture-filename',
+                title: name
+            });
+            captureName = mkElem('input', {
+                className: 'capture-name input-sm hidden',
+                placeholder: 'Capture name (not filename)'
+            });
+            saveBtn = mkElem('a', {
+                innerHTML: '<span class="glyphicon glyphicon-floppy-disk"></span>',
+                title: 'Save',
+                href: '#',
+                onclick: async () => {
+                    if (obj.name !== captureName.value) {
+                        obj.name = captureName.value;
+                        text = JSON.stringify(obj);
+                        await db.set(name, text);
+                        downloadA.href = window.URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+                    }
+                    fileName.classList.remove('hidden');
+                    captureName.classList.add('hidden');
+                    btnGroup.classList.remove('hidden');
+                    saveBtn.classList.add('hidden');
+                },
+                className: 'btn btn-default btn-sm hidden'
+            });
+            fileName.append(mkElem('div', { innerText: name.substr(0, name.length - 20) }));
+            fileName.append(mkElem('div', { innerText: name.substr(name.length - 20) }));
+            btnGroup = mkElem('div', { className: 'btn-group' });
             btnGroup.append(mkElem('a', {
+                innerHTML: '<span class="glyphicon glyphicon-pencil"></span>',
+                title: 'Edit capture name (not filename)',
+                href: '#',
+                onclick: () => {
+                    if (obj.name == null) {
+                        obj.name = '';
+                    }
+                    captureName.value = obj.name;
+                    fileName.classList.add('hidden');
+                    captureName.classList.remove('hidden');
+                    btnGroup.classList.add('hidden');
+                    saveBtn.classList.remove('hidden');
+                },
+                className: 'btn btn-default btn-sm'
+            }));
+            downloadA = mkElem('a', {
                 innerHTML: '<span class="glyphicon glyphicon-download-alt"></span>',
                 title: 'Download ' + name,
                 href: window.URL.createObjectURL(new Blob([text], { type: 'application/json' })),
                 download: name,
                 className: 'btn btn-default btn-sm'
-            }));
+            });
+            btnGroup.append(downloadA);
             btnGroup.append(mkElem('a', {
                 innerHTML: '<span class="glyphicon glyphicon-trash"></span>',
                 title: 'Remove ' + name,
@@ -410,14 +471,10 @@
                 },
                 className: 'btn btn-danger btn-sm'
             }));
-            let fileName = mkElem('div', {
-                className: 'capture-filename',
-                title: name
-            });
-            fileName.append(mkElem('div', { innerText: name.substr(0, name.length - 20) }));
-            fileName.append(mkElem('div', { innerText: name.substr(name.length - 20) }));
             div.append(fileName);
+            div.append(captureName);
             div.append(btnGroup);
+            div.append(saveBtn);
         }
 
         // https://github.com/sindresorhus/escape-string-regexp
@@ -513,9 +570,15 @@
     let scriptChangeLog = [
         {
             version: { major: 1, minor: 1, patch: 1 }, changes: [
+                'Capture in v1.1.0 file format',
+                'Edit capture name button'
+            ]
+        },
+        {
+            version: { major: 1, minor: 1, patch: 1 }, changes: [
                 'Auto update test'
             ]
-        },{
+        }, {
             version: { major: 1, minor: 1, patch: 0 }, changes: [
                 'Auto update',
                 'Alternative hook method',
