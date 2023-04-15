@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AI Meme Prompt Override
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  Override prompts of AI-generated memes on ai-meme.com
 // @author       firlin123
 // @match        https://ai-meme.com/
@@ -21,7 +21,7 @@ const mainFunction = function () {
                 const canvas = document.getElementById('canvas');
 
                 prompt = document.createElement('textarea');
-                prompt.style.cssText = 'width: 700px; min-height: 150px;';
+                prompt.style.cssText = 'width: 700px; min-height: 150px; max-width: calc(100% - 10px)';
                 canvas.parentNode.insertBefore(prompt, canvas.nextSibling);
 
                 prompt.addEventListener('input', () => {
