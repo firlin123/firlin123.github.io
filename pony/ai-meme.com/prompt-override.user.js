@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         AI Meme Prompt Override
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @description  Override prompts of AI-generated memes on ai-meme.com
 // @author       firlin123
 // @match        https://ai-meme.com/
@@ -63,7 +63,12 @@ const mainFunction = function () {
     Response.prototype.jsonOrig = Response.prototype.json;
     Response.prototype.json = function json(...args) {
         const promise = Response.prototype.jsonOrig.apply(this, args);
-        promise.then(json => onJson(json));
+        promise.then(json => {
+            if (this.url === 'https://api-inference.huggingface.co/models/Salesforce/blip-image-captioning-base') {
+                return onJson({ desc: json?.[0]?.generated_text });
+            }
+            onJson(json);
+        });
         return promise;
     };
 };
